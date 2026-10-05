@@ -218,7 +218,6 @@ foreach ($rawRows as $rawRow) {
     if ($gender === null) {
         continue;
     }
-    $row['gender'] = $gender;
 
     $ageGroup = mapAgeGroup($row['age_group'], $ageGroupMap);
     if ($ageGroup === null) {
@@ -238,14 +237,14 @@ foreach ($rawRows as $rawRow) {
         continue;
     }
 
-    $key = buildKey($row['cancer_type'], $row['gender'], $row['time_span'], $ageGroup);
+    $key = buildKey($row['cancer_type'], $gender, $row['time_span'], $ageGroup);
 
     if (!isset($groups[$key])) {
         $groups[$key] = [
             'time_span'   => $row['time_span'],
             'age_group'   => $ageGroup,
             'cancer_type' => $row['cancer_type'],
-            'gender'      => $row['gender'],
+            'gender'      => $gender,
             'values'      => [], // [metric][5-Jahres-Gruppe] => Wert
         ];
     }
