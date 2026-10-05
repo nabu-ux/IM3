@@ -188,6 +188,7 @@ $ageOrder = array_flip(array_keys($sourcesPerGroup)); // '0-9' => 0, ... '80+' =
 // ---------------------------------------------------------------------------
 $groups = [];
 
+
 foreach ($rawRows as $rawRow) {
     $audit['input_rows']++;
     $row = selectAndRename($rawRow);
@@ -238,6 +239,17 @@ foreach ($rawRows as $rawRow) {
     }
 
     $groups[$key]['values'][$metric][$row['age_group']] = $value;
+
+}
+
+// Referenz-Krebsart automatisch finden, falls der exakte Name abweicht.
+if (!in_array($referenceCancerType, array_column($groups, 'cancer_type'), true)) {
+    foreach ($groups as $group) {
+        if (str_starts_with($group['cancer_type'], 'Alle Krebsarten')) {
+            $referenceCancerType = $group['cancer_type'];
+            break;
+        }
+    }
 }
 
 // ---------------------------------------------------------------------------
@@ -259,6 +271,12 @@ foreach ($groups as $group) {
             $populations[buildKey($group['gender'], $group['time_span'], $sourceAge)] = $population;
         }
     }
+}
+
+if (count($populations) === 0) {
+    throw new RuntimeException(
+        "Keine Bevölkerungszahlen berechnet: Referenz-Krebsart «{$referenceCancerType}» nicht gefunden."
+    );
 }
 
 // ---------------------------------------------------------------------------
@@ -312,7 +330,7 @@ usort($transformedRows, function (array $a, array $b) use ($ageOrder): int {
 
 $audit['output_rows'] = count($transformedRows);
 
-print_r($audit);
+//print_r($audit);
 
 return [
     'rules' => [

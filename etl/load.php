@@ -7,6 +7,8 @@ require __DIR__ . '/../config.php';
 $result = include __DIR__ . '/transform.php';
 $rows = $result['data'];
 
+print_r($rows);
+
 echo 'Der Transform liefert ' . count($rows) . " Zeilen.\n\n";
 
 // ---------------------------------------------------------------------------

@@ -1,67 +1,49 @@
 <?php
 
 /**
- * Code-Along 08: CSV lesen (Extract) – Lösung
+ * Extract: CSV zeilenweise lesen.
  *
- * Quelle -> PHP-Array von Datensätzen, diesmal aus einer echten CSV-Datei.
+ * Statt alle Zeilen in einem Array zu sammeln, liefert diese Datei einen
+ * Generator. transform.php kann ihn mit foreach durchlaufen wie ein Array,
+ * aber es liegt immer nur EINE Zeile im Speicher.
  */
 
 header('Content-Type: text/plain; charset=utf-8');
 
-// 1. CSV-Datei zum Lesen öffnen.
-$handle = fopen('data/cancer.csv', 'r');
+return (function () {
+    // 1. CSV-Datei zum Lesen öffnen.
+    $handle = fopen(__DIR__ . '/data/cancer.csv', 'r');
 
-if ($handle === false) {
-    die('CSV-Datei konnte nicht geöffnet werden.');
-}
-
-// 2. Kopfzeile (Spaltennamen) lesen und Leerzeichen entfernen.
-$headerRow = fgetcsv($handle, null, ',', '"', '');
-
-if ($headerRow === false) {
-    die('CSV-Datei ist leer oder die Kopfzeile konnte nicht gelesen werden.');
-}
-
-$header = array_map('trim', $headerRow);
-
-// 3. Die weiteren Zeilen schrittweise lesen.
-//
-// Wir speichern NICHT die gesamte CSV in $cases.
-// Dadurch bleibt der Speicherverbrauch klein.
-//
-// Für die Kontrolle speichern wir nur die ersten 5 Datensätze.
-$cases = [];
-
-while (($row = fgetcsv($handle, null, ',', '"', '')) !== false) {
-
-    // Leere Zeilen überspringen.
-    if (($row[0] ?? '') === '') {
-        continue;
+    if ($handle === false) {
+        die('CSV-Datei konnte nicht geöffnet werden.');
     }
 
-    // Spaltennamen mit den Werten verbinden.
-    $case = array_combine($header, $row);
+    // 2. Kopfzeile lesen; Leerzeichen und ein allfälliges UTF-8-BOM entfernen.
+    $headerRow = fgetcsv($handle, null, ',', '"', '');
 
-    // Nur die ersten 5 Datensätze für die Ausgabe speichern.
+    if ($headerRow === false) {
+        die('CSV-Datei ist leer oder die Kopfzeile konnte nicht gelesen werden.');
+    }
 
-    $cases[] = $case;
+    $header = array_map(fn($h) => trim($h, " \t\n\r\0\x0B\xEF\xBB\xBF"), $headerRow);
 
-}
+    // 3. Zeile für Zeile lesen und einzeln weitergeben (yield).
+    while (($row = fgetcsv($handle, null, ',', '"', '')) !== false) {
 
-fclose($handle);
+        // Leere Zeilen überspringen.
+        if (($row[0] ?? '') === '') {
+            continue;
+        }
 
-// 4. Struktur prüfen.
-//echo 'Spalten: ' . implode(', ', $header) . "\n";
-//echo 'Anzahl gespeicherte Cases: ' . count($cases) . "\n\n";
+        // Zeilen mit falscher Spaltenanzahl überspringen
+        // (array_combine wirft sonst in PHP 8 einen Fehler).
+        if (count($row) !== count($header)) {
+            continue;
+        }
 
-// 5. Die ersten 5 Datensätze ausgeben.
-//foreach ($cases as $a) {
-  //  echo $a['Krebsart']
-    //    . ': '
-      //  . $a['Periode']
-      //  . ' – '
-        //. $a['Geschlecht']
-    //    . "\n";
-//}
+        yield array_combine($header, $row);
 
-return $cases;
+    }
+
+    fclose($handle);
+})();
