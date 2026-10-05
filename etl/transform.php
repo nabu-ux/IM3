@@ -23,6 +23,12 @@ $rawRows = include __DIR__ . '/extract.php';
 // Der Zieldatensatz hat keine Regionsspalte -> wir behalten nur die ganze Schweiz.
 $region = 'Schweiz';
 
+$genderMap = [
+    'Männlich' => 'male',
+    'Weiblich' => 'female',
+
+];
+
 // 5-Jahres-Gruppe (Originalwert) -> 10-Jahres-Gruppe (Zielwert).
 // Alle anderen Altersklassen der CSV (z. B. «0-24 Jahre», «65-84 Jahre»,
 // «75 Jahre und mehr») überlappen mit diesen und werden verworfen.
@@ -113,6 +119,12 @@ function parseValue(string $value): ?float
     return $number < 0 ? null : $number;
 }
 
+// Geschlecht aus der CSV zu male female, null bei allen anderen Werten
+function mapGender(string $gender, array $genderMap): ?string
+{
+    return $genderMap[$gender] ?? null;
+}
+
 /** 5-Jahres-Gruppe -> 10-Jahres-Gruppe, null bei überlappenden Klassen. */
 function mapAgeGroup(string $ageGroup, array $ageGroupMap): ?string
 {
@@ -200,6 +212,10 @@ foreach ($rawRows as $rawRow) {
 
     if (isMissingStatus($row['status'])) {
         $audit['missing_status_m']++;
+        continue;
+    }
+    $gender = mapGender($row['gender'], $genderMap);
+    if ($gender === null) {
         continue;
     }
 
