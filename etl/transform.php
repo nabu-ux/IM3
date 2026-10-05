@@ -218,6 +218,7 @@ foreach ($rawRows as $rawRow) {
     if ($gender === null) {
         continue;
     }
+    $row['gender'] = $gender;
 
     $ageGroup = mapAgeGroup($row['age_group'], $ageGroupMap);
     if ($ageGroup === null) {
