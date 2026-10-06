@@ -1,0 +1,248 @@
+/* Die Farben und die Breite unserer Seite */
+:root {
+  color-scheme: light;
+  --bg: #ffffff;
+  --text: #000000;
+  --border: #c5c5c5;   /* Rahmen und Linien */
+  --accent: #954139;   /* Titel und wichtige Texte */
+}
+
+* { box-sizing: border-box; }
+
+body {
+  margin: 0; /* Damit Seite direkt am Fensterrand beginnt. */
+  background: var(--bg);
+  font-family: Arial, Helvetica, sans-serif;
+  color: var(--text);
+}
+
+/* So sieht Text aus, wenn man ihn mit der Maus markiert. */
+::selection {
+  background: var(--border);
+  color: var(--text);
+}
+
+/* Der Inhalt also die Kapitel stehen in der Mitte und werden nicht breiter als 720 Pixel. */
+.layout {
+  max-width: 720px;
+  margin: 0 auto; /* Stellt den Inhalt in die Mitte. */
+  padding: 0 20px 96px; /* Abstand innen: oben 0, links und rechts 20px, unten 96px. */
+}
+
+/* Titel und Geschichte */
+/* margin = Abstand aussen. padding = Abstand innen. */
+header.header-inner {
+  padding: 72px 0 56px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 8px;
+}
+
+/* Schrift und Farbe für die kleine Zeile über dem Titel und Kapiteltitel */
+.ready-tag,
+.section-title {
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 12px;
+  text-transform: uppercase;
+  color: var(--accent);
+}
+
+.ready-tag {
+  letter-spacing: .08em;
+  margin: 0 0 22px;
+}
+
+/* Schrift und Farbe für grosser Titel und Zitate */
+h1.hero-text,
+.story-body > .quote {
+  font-family: Georgia, 'Times New Roman', serif;
+  font-weight: 500;
+  color: var(--accent);
+}
+
+h1.hero-text {
+  /* Die Schrift wächst mit dem Fenster. Sie bleibt zwischen 40 und 64 Pixel gross. */
+  font-size: clamp(40px, 9vw, 64px);
+  line-height: 1.02;
+  letter-spacing: -0.01em;
+  margin: 0 0 22px;
+  text-wrap: balance; /*  Wörter sollen sich gleichmässig auf die Titelzeilen verteilen. */
+}
+
+/* Das Wort in em (Titel) ist schon kursiv. Hier machen wir es aber noch schwarz. */
+h1.hero-text em {
+  color: var(--text);
+}
+
+.hero-sub {
+  font-size: 18px;
+  line-height: 1.55;
+  color: var(--accent);
+  max-width: 46ch; /* Begrenzt die Textbreite. ch orientiert sich an der Breite der Ziffer 0. */
+  margin: 0;
+}
+
+section.story-section { padding: 64px 0 8px; }
+
+/* Zwischen zwei Kapiteln kommt eine Linie. Vor dem ersten Kapitel gibt es keine. */
+section.story-section + section.story-section { border-top: 1px solid var(--border); }
+
+.section-title {
+  letter-spacing: .06em;
+  margin: 0 0 14px;
+}
+
+/* Das ist die Schrift für unsere Geschichte */
+.story-body > p {
+  font-size: 17px;
+  line-height: 1.7; /* Mehr Platz zwischen den Textzeilen, damit man sie gut lesen kann. */
+  max-width: 60ch;
+  margin: 0;
+}
+
+/* Mehr Platz zwischen zwei Absätzen */
+.story-body > p + p { margin-top: 14px; }
+
+/* Zitate werden grösser und kursiv. Links bekommen sie eine graue Linie. */
+.story-body > .quote {
+  font-style: italic;
+  font-size: 26px;
+  line-height: 1.45;
+  max-width: 22ch;
+  margin: 28px 0;
+  padding-left: 22px;
+  border-left: 3px solid var(--border);
+}
+
+
+
+
+/* Kasten um ein Diagramm. */
+.card {
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.06), 0 8px 24px rgba(0,0,0,0.06);
+  padding: 26px 24px;
+  margin-top: 24px;
+}
+
+/* Der Browser gibt figure links und rechts Abstand. Den nehmen wir weg. */
+figure.card {
+  margin-left: 0;
+  margin-right: 0;
+}
+
+.chart-title {
+  font-size: 16px;
+  font-weight: 600;
+  margin: 0 0 2px;
+}
+
+/* Diese Texte haben alle die gleiche Schriftgrösse. */
+.chart-sub,
+.chart-note,
+.data-table,
+footer.footer-copy { font-size: 13px; }
+
+.chart-sub {
+  color: var(--accent);
+  margin: 0 0 18px;
+}
+
+.chart-note {
+  margin: 16px 0 0;
+  line-height: 1.55;
+}
+
+/* Nach dem Diagrammkasten lassen wir mehr Platz bis zum nächsten Text. */
+.story-body > .card + p { margin-top: 28px; }
+
+/* Die Knöpfe stehen nebeneinander. Wenn der Platz fehlt, geht es in der nächsten Zeile weiter. */
+.filter-group {
+  display: flex;
+  gap: 6px;
+  margin-bottom: 18px;
+  flex-wrap: wrap;
+}
+
+.filter-btn {
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--text);
+  font: inherit; /* Der Knopf übernimmt erst die Schrift aus dem Bereich darum. */
+  font-family: 'Courier New', Courier, monospace;
+  font-size: 12px;
+  letter-spacing: .02em;
+  padding: 7px 14px;
+  border-radius: 999px; /* Damit die Knöpfe runde Enden haben. */
+  cursor: pointer;
+  transition: background .15s, color .15s, border-color .15s; /* Die Farben wechseln weich statt plötzlich. */
+}
+
+/* Wenn die Maus über dem Knopf ist, wird sein Rahmen schwarz also es wird gehovert */
+.filter-btn:hover { border-color: var(--text); }
+
+.filter-btn:disabled {
+  opacity: .5;
+  cursor: not-allowed;
+}
+
+/* Der ausgewählte Knopf wird grau. script.js gibt ihm dafür die Klasse active. */
+.filter-btn.active {
+  background: var(--border);
+  border-color: var(--text);
+}
+
+/* Wenn wir mit der Tab-Taste einen Knopf auswählen, zeigt der Rahmen, wo man gerade ist */
+.filter-btn:focus-visible {
+  outline: 2px solid var(--text);
+  outline-offset: 3px;
+}
+
+/* Hier zeichnet Chart.js das Diagramm.
+   Wir geben somit eine feste Höhe, damit es nicht immer grösser wird. */
+.chart-container {
+  position: relative;
+  height: 340px;
+}
+
+.chart-container canvas {
+  display: block;
+  max-width: 100%;
+}
+
+/* Die Tabelle lässt sich im Browser auf- und zuklappen */
+.data-table { margin-top: 12px; }
+
+.data-table summary { cursor: pointer; }
+
+/* Wenn die Tabelle zu breit ist, kann man seitlich scrollen */
+.table-wrap { overflow-x: auto; }
+
+.data-table table {
+  width: 100%;
+  border-collapse: collapse; /* So entstehen zwischen den Tabellenfeldern keine doppelten Rahmen */
+  margin-top: 12px;
+}
+
+/* Hier gestalten wir die Tabellenfelder. th ist eine Überschrift, td ein normales Feld */
+.data-table th,
+.data-table td {
+  text-align: left;
+  padding: 8px;
+  border-bottom: 1px solid var(--border);
+}
+
+/* So sehen Meldungen aus, zum Beispiel wenn Daten fehlen. */
+.data-status {
+  font-size: 14px;
+  line-height: 1.6;
+}
+
+/* 4. Unsere Quellenangabe ganz unten */
+footer.footer-copy {
+  border-top: 1px solid var(--border);
+  margin-top: 56px;
+  padding-top: 22px;
+  line-height: 1.6;
+}
