@@ -1,5 +1,7 @@
 // Diese PHP-Datei liefert uns die Daten für die Diagramme
-const DATEN_URL = 'unload.php';
+const DATEN_URL = '/unload.php';
+
+
 
 // Diese Zeitspanne und Altersgruppe verwenden wir für unsere Auswertung
 const AKTUELLER_ZEITRAUM = '2018-2022';
@@ -8,32 +10,109 @@ const GESCHLECHTER = { total: 'Beide Geschlechter', female: 'Frauen', male: 'Mä
 const ROTBRAUN = '#954139';
 const ORANGE = '#b74f1c';
 
+
+
 // Hier speichern wir später die Daten, die wir von PHP bekommen
 let daten = [];
+
 // Die ersten zwei Diagramme starten mit beiden Geschlechtern, das dritte mit Frauen
 const auswahl = { altersdiagramm: 'total', zeitdiagramm: 'total', krebsartendiagramm: 'female' };
+
 // Hier merken wir uns die Diagramme. So müssen wir sie nicht bei jedem Klick neu erstellen
 const diagramme = {};
+
+
 
 // In den Daten kann zum Beispiel Frauen stehen. Unser Code nennt das female
 // Mit dieser Liste ordnen wir die verschiedenen Namen einander zu
 const GESCHLECHT_ZUORDNUNG = {
-    'Frauen': 'female', 'Männer': 'male',
+    'Frauen': 'female', 'Weiblich': 'female', 'Männer': 'male', 'Männlich': 'male',
     'Beide Geschlechter': 'total', 'Total': 'total', 'Insgesamt': 'total',
     'total': 'total', 'female': 'female', 'male': 'male'
 };
-const GESAMT_KREBSARTEN = ['Alle Krebsarten', 'Alle Krebsarten (C00-C97)', 'Total', 'Insgesamt'];
+const GESAMT_KREBSARTEN = ['Alle Krebsarten', 'Alle Krebsarten (C00-C97)', 'Alle Krebsarten (total) (C00-C97*)', 'Total', 'Insgesamt'];
+const GESCHLECHTSSPEZIFISCHE_KREBSARTEN = {
+    'Eierstockkrebs (C56)': 'female',
+    'Gebärmutterhalskrebs (C53)': 'female',
+    'Gebärmutterkörperkrebs (C54-C55)': 'female',
+    'Hodenkrebs (C62)': 'male',
+    'Prostatakrebs (C61)': 'male'
+};
+
+function gesamtwerteErgaenzen(zeilen) {
+    const gruppen = new Map();
+    const bevoelkerungen = new Map();
+
+    zeilen.forEach(zeile => {
+        if (!['female', 'male', 'total'].includes(zeile.sex)) {
+            return;
+        }
+        const gruppenschluessel = JSON.stringify([zeile.period, zeile.age_group, zeile.cancer_type]);
+        if (!gruppen.has(gruppenschluessel)) {
+            gruppen.set(gruppenschluessel, {});
+        }
+        gruppen.get(gruppenschluessel)[zeile.sex] = zeile;
+
+        if (zeile.cancer_type === 'Alle Krebsarten' && zeile.sex !== 'total' &&
+            Number.isFinite(zeile.cases) && zeile.cases > 0 &&
+            Number.isFinite(zeile.incidence_rate) && zeile.incidence_rate > 0) {
+            const bevoelkerungsschluessel = JSON.stringify([zeile.period, zeile.age_group, zeile.sex]);
+            bevoelkerungen.set(bevoelkerungsschluessel, zeile.cases / zeile.incidence_rate * 100000);
+        }
+    });
+
+    const gesamtzeilen = [];
+    gruppen.forEach(gruppe => {
+        if (gruppe.total) {
+            return;
+        }
+        const vorhandeneZeilen = [gruppe.female, gruppe.male].filter(Boolean);
+        const vorlage = vorhandeneZeilen[0];
+        if (vorhandeneZeilen.length < 2 && GESCHLECHTSSPEZIFISCHE_KREBSARTEN[vorlage.cancer_type] !== vorlage.sex) {
+            return;
+        }
+
+        const frauenBevoelkerung = bevoelkerungen.get(JSON.stringify([vorlage.period, vorlage.age_group, 'female']));
+        const maennerBevoelkerung = bevoelkerungen.get(JSON.stringify([vorlage.period, vorlage.age_group, 'male']));
+        const gesamtBevoelkerung = frauenBevoelkerung + maennerBevoelkerung;
+        const gemeinsameRate = kennzahl => {
+            if (!Number.isFinite(gesamtBevoelkerung) || gesamtBevoelkerung <= 0 ||
+                !vorhandeneZeilen.every(zeile => Number.isFinite(zeile[kennzahl]))) {
+                return null;
+            }
+            const gewichteteSumme = vorhandeneZeilen.reduce((summe, zeile) => {
+                const bevoelkerung = zeile.sex === 'female' ? frauenBevoelkerung : maennerBevoelkerung;
+                return summe + zeile[kennzahl] * bevoelkerung;
+            }, 0);
+            return Math.round(gewichteteSumme / gesamtBevoelkerung * 10000) / 10000;
+        };
+
+        gesamtzeilen.push({
+            ...vorlage,
+            sex: 'total',
+            cases: vorhandeneZeilen.every(zeile => Number.isFinite(zeile.cases))
+                ? Math.round(vorhandeneZeilen.reduce((summe, zeile) => summe + zeile.cases, 0) * 10000) / 10000
+                : null,
+            incidence_rate: gemeinsameRate('incidence_rate'),
+            mortality_rate: gemeinsameRate('mortality_rate')
+        });
+    });
+    return [...zeilen, ...gesamtzeilen];
+}
+
+
+
 
 // Hier passen wir die Namen und Schreibweisen aus den Daten an unsere Diagramme an
 function datenAnpassen(zeilen) {
     // Wir gehen jede Datenzeile einzeln durch
-    return zeilen.map(zeile => {
+    const angepassteZeilen = zeilen.map(zeile => {
         // Falls gender fehlt, nehmen wir sex. trim entfernt Leerzeichen am Anfang und Ende
         const geschlecht = String(zeile.gender ?? zeile.sex ?? '').trim();
         const krebsart = String(zeile.cancer_type ?? '').trim();
         return {
-            period: String(zeile.time_span ?? zeile.period ?? '').trim().replace(/[–−]/g, '-'),
-            age_group: String(zeile.age_group ?? '').trim().replace(/[–−]/g, '-'),
+            period: String(zeile.time_span ?? zeile.period ?? '').trim().replace(/\s*[–−-]\s*/g, '-'),
+            age_group: String(zeile.age_group ?? '').trim().replace(/\s*[–−-]\s*/g, '-'),
             sex: GESCHLECHT_ZUORDNUNG[geschlecht] ?? geschlecht,
             cancer_type: GESAMT_KREBSARTEN.includes(krebsart) ? 'Alle Krebsarten' : krebsart,
             cases: zeile.incidence_cases !== undefined ? zeile.incidence_cases : zeile.cases,
@@ -41,6 +120,7 @@ function datenAnpassen(zeilen) {
             mortality_rate: zeile.mortality_rate
         };
     });
+    return gesamtwerteErgaenzen(angepassteZeilen);
 }
 
 // Wir erstellen die drei Diagramme zuerst ohne Daten. Die Zahlen kommen später dazu

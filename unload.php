@@ -55,7 +55,7 @@ header('Content-Type: application/json; charset=utf-8');
 // Dieselbe config.php wie beim Load. Sie liefert $dsn, $username, $password
 // und $options. Anzahl «/..» an eure Ordnerstruktur anpassen.
 
-require __DIR__ . '/config.php';
+require __DIR__ . '/etl/config.php';
 
 // ---------------------------------------------------------------------------
 // 3: Eine Datenbankzeile in die Form des Datenvertrags bringen
