@@ -6,9 +6,10 @@ const DATEN_URL = '/unload.php';
 // Diese Zeitspanne und Altersgruppe verwenden wir für unsere Auswertung
 const AKTUELLER_ZEITRAUM = '2018-2022';
 const ZIELALTER = '20-29';
-const GESCHLECHTER = { total: 'Beide Geschlechter', female: 'Frauen', male: 'Männer' };
+const MAX_NEUERKRANKUNGEN = 6000;
+const GESCHLECHTER = { total: 'Beide Geschlechter', female: 'Frauen', male: 'Männer', comparison: 'Frauen & Männer' };
 const ROTBRAUN = '#954139';
-const ORANGE = '#b74f1c';
+const BLAU = '#8e9aee';
 
 
 
@@ -16,7 +17,7 @@ const ORANGE = '#b74f1c';
 let daten = [];
 
 // Die ersten zwei Diagramme starten mit beiden Geschlechtern, das dritte mit Frauen
-const auswahl = { altersdiagramm: 'total', zeitdiagramm: 'total', krebsartendiagramm: 'female' };
+const auswahl = { altersdiagramm: 'total', zeitdiagramm: 'comparison', krebsartendiagramm: 'female' };
 
 // Hier merken wir uns die Diagramme. So müssen wir sie nicht bei jedem Klick neu erstellen
 const diagramme = {};
@@ -25,19 +26,19 @@ const diagramme = {};
 
 // In den Daten kann zum Beispiel Frauen stehen. Unser Code nennt das female
 // Mit dieser Liste ordnen wir die verschiedenen Namen einander zu
-const GESCHLECHT_ZUORDNUNG = {
-    'Frauen': 'female', 'Weiblich': 'female', 'Männer': 'male', 'Männlich': 'male',
-    'Beide Geschlechter': 'total', 'Total': 'total', 'Insgesamt': 'total',
-    'total': 'total', 'female': 'female', 'male': 'male'
-};
+const GESCHLECHT_ZUORDNUNG = new Map([
+    ['Frauen', 'female'], ['Weiblich', 'female'], ['Männer', 'male'], ['Männlich', 'male'],
+    ['Beide Geschlechter', 'total'], ['Total', 'total'], ['Insgesamt', 'total'],
+    ['total', 'total'], ['female', 'female'], ['male', 'male']
+]);
 const GESAMT_KREBSARTEN = ['Alle Krebsarten', 'Alle Krebsarten (C00-C97)', 'Alle Krebsarten (total) (C00-C97*)', 'Total', 'Insgesamt'];
-const GESCHLECHTSSPEZIFISCHE_KREBSARTEN = {
-    'Eierstockkrebs (C56)': 'female',
-    'Gebärmutterhalskrebs (C53)': 'female',
-    'Gebärmutterkörperkrebs (C54-C55)': 'female',
-    'Hodenkrebs (C62)': 'male',
-    'Prostatakrebs (C61)': 'male'
-};
+const GESCHLECHTSSPEZIFISCHE_KREBSARTEN = new Map([
+    ['Eierstockkrebs (C56)', 'female'],
+    ['Gebärmutterhalskrebs (C53)', 'female'],
+    ['Gebärmutterkörperkrebs (C54-C55)', 'female'],
+    ['Hodenkrebs (C62)', 'male'],
+    ['Prostatakrebs (C61)', 'male']
+]);
 
 function gesamtwerteErgaenzen(zeilen) {
     const gruppen = new Map();
@@ -68,7 +69,7 @@ function gesamtwerteErgaenzen(zeilen) {
         }
         const vorhandeneZeilen = [gruppe.female, gruppe.male].filter(Boolean);
         const vorlage = vorhandeneZeilen[0];
-        if (vorhandeneZeilen.length < 2 && GESCHLECHTSSPEZIFISCHE_KREBSARTEN[vorlage.cancer_type] !== vorlage.sex) {
+        if (vorhandeneZeilen.length < 2 && GESCHLECHTSSPEZIFISCHE_KREBSARTEN.get(vorlage.cancer_type) !== vorlage.sex) {
             return;
         }
 
@@ -113,7 +114,7 @@ function datenAnpassen(zeilen) {
         return {
             period: String(zeile.time_span ?? zeile.period ?? '').trim().replace(/\s*[–−-]\s*/g, '-'),
             age_group: String(zeile.age_group ?? '').trim().replace(/\s*[–−-]\s*/g, '-'),
-            sex: GESCHLECHT_ZUORDNUNG[geschlecht] ?? geschlecht,
+            sex: GESCHLECHT_ZUORDNUNG.get(geschlecht) ?? geschlecht,
             cancer_type: GESAMT_KREBSARTEN.includes(krebsart) ? 'Alle Krebsarten' : krebsart,
             cases: zeile.incidence_cases !== undefined ? zeile.incidence_cases : zeile.cases,
             incidence_rate: zeile.incidence_rate,
@@ -123,9 +124,37 @@ function datenAnpassen(zeilen) {
     return gesamtwerteErgaenzen(angepassteZeilen);
 }
 
+function krebsartBeschriften(achse, wert) {
+    const bezeichnung = achse.getLabelForValue(wert).replace(
+        'Krebs des Gehirns und Zentralnervensystems (ZNS)', 'Gehirn- und ZNS-Krebs'
+    );
+    const maximaleBreite = Math.min(220, Math.max(150, achse.chart.width / 2)) - 40;
+    const kontext = achse.ctx;
+    kontext.save();
+    kontext.font = window['Chart']['helpers']['toFont'](achse.options.ticks.font)['string'];
+    const zeilen = [];
+    let zeile = '';
+    for (const wort of bezeichnung.split(' ')) {
+        const erweitert = zeile ? zeile + ' ' + wort : wort;
+        if (zeile && kontext.measureText(erweitert).width > maximaleBreite) {
+            zeilen.push(zeile);
+            zeile = wort;
+        } else {
+            zeile = erweitert;
+        }
+    }
+    zeilen.push(zeile);
+    kontext.restore();
+    return zeilen;
+}
+
 // Wir erstellen die drei Diagramme zuerst ohne Daten. Die Zahlen kommen später dazu
 // type bestimmt die Diagrammart. In data stehen die Daten und in options die Einstellungen
 function diagrammeErstellen() {
+    const Chart = window['Chart'];
+    if (typeof Chart !== 'function') {
+        throw new Error('Chart.js konnte nicht geladen werden. Seite neu laden.');
+    }
     // Das erste Diagramm zeigt Balken für die Altersgruppen
     diagramme.altersdiagramm = new Chart(document.querySelector('#altersdiagramm'), {
         type: 'bar',
@@ -133,10 +162,25 @@ function diagrammeErstellen() {
         options: {
             responsive: true, // Die Breite passt sich dem Bildschirm an
             maintainAspectRatio: false,
-            plugins: { legend: { display: false } },
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    callbacks: {
+                        label: kontext => kontext.dataset.label + ': ' + kontext.raw.cases
+                    }
+                }
+            },
             scales: {
                 x: { title: { display: true, text: 'Altersklasse (Jahre)' } },
-                y: { beginAtZero: true, title: { display: true, text: 'Anzahl Neuerkrankungen' } }
+                y: {
+                    beginAtZero: true,
+                    max: MAX_NEUERKRANKUNGEN,
+                    ticks: {
+                        stepSize: 1000,
+                        callback: wert => wert === MAX_NEUERKRANKUNGEN ? '+6000' : wert
+                    },
+                    title: { display: true, text: 'Anzahl Neuerkrankungen' }
+                }
             }
         }
     });
@@ -147,9 +191,10 @@ function diagrammeErstellen() {
         options: {
             responsive: true,
             maintainAspectRatio: false,
+            interaction: { mode: 'index', intersect: false },
             scales: {
                 x: { title: { display: true, text: 'Fünfjahreszeitraum' } },
-                // Beide Linien zeigen Werte pro 100'000 Personen. Darum reicht eine gemeinsame Skala
+                // Alle Linien zeigen Werte pro 100'000 Personen. Darum reicht eine gemeinsame Skala
                 y: { beginAtZero: true, title: { display: true, text: 'Pro 100’000 Einwohner:innen' } }
             }
         }
@@ -164,8 +209,24 @@ function diagrammeErstellen() {
             maintainAspectRatio: false,
             plugins: { legend: { display: false } },
             scales: {
-                x: { beginAtZero: true, title: { display: true, text: 'Anzahl Fälle' } },
-                y: { title: { display: true, text: 'Krebsart' } }
+                x: {
+                    beginAtZero: true,
+                    max: 120,
+                    ticks: { stepSize: 20 },
+                    title: { display: true, text: 'Anzahl Fälle' }
+                },
+                y: {
+                    afterFit: achse => {
+                        achse.width = Math.min(220, Math.max(150, achse.chart.width / 2));
+                        achse.paddingTop = 0;
+                        achse.paddingBottom = 0;
+                    },
+                    ticks: {
+                        autoSkip: false,
+                        callback: function(wert) { return krebsartBeschriften(this, wert); }
+                    },
+                    title: { display: true, text: 'Krebsart' }
+                }
             }
         }
     });
@@ -224,7 +285,11 @@ function render(kennung) {
         diagramm.data.labels = zeilen.map(zeile => zeile.age_group);
         diagramm.data.datasets = [{
             label: GESCHLECHTER[geschlecht],
-            data: zeilen.map(zeile => zeile.cases),
+            data: zeilen.map(zeile => ({
+                x: zeile.age_group,
+                y: Math.min(zeile.cases, MAX_NEUERKRANKUNGEN),
+                cases: zeile.cases
+            })),
             backgroundColor: zeilen.map(zeile => zeile.age_group === ZIELALTER ? ROTBRAUN : '#595959')
         }];
         spalten = ['Altersklasse', 'Neuerkrankungen'];
@@ -233,20 +298,42 @@ function render(kennung) {
 
     // Für den Verlauf nehmen wir die Werte der 20- bis 29-Jährigen aus allen Zeiträumen
     if (kennung === 'zeitdiagramm') {
+        const geschlechter = ['female', 'male'];
         zeilen = daten.filter(zeile =>
-            zeile.sex === geschlecht && zeile.age_group === ZIELALTER &&
+            geschlechter.includes(zeile.sex) && zeile.age_group === ZIELALTER &&
             zeile.cancer_type === 'Alle Krebsarten' &&
             (zeile.incidence_rate !== null || zeile.mortality_rate !== null)
         );
         zeilen.sort((a, b) => parseInt(a.period) - parseInt(b.period));
-        diagramm.data.labels = zeilen.map(zeile => zeile.period);
-        diagramm.data.datasets = [
-            { label: 'Inzidenz', data: zeilen.map(zeile => zeile.incidence_rate), borderColor: ROTBRAUN, backgroundColor: ROTBRAUN },
-            { label: 'Mortalität', data: zeilen.map(zeile => zeile.mortality_rate), borderColor: ORANGE, backgroundColor: ORANGE, borderDash: [7, 5] }
-        ];
+        const zeitraeume = [...new Set(zeilen.map(zeile => zeile.period))];
+        diagramm.data.labels = zeitraeume;
+        diagramm.data.datasets = geschlechter.flatMap(ausgewaehltesGeschlecht => {
+            const werte = new Map(zeilen.filter(zeile => zeile.sex === ausgewaehltesGeschlecht)
+                .map(zeile => [zeile.period, zeile]));
+            const bezeichnung = GESCHLECHTER[ausgewaehltesGeschlecht] + ' · ';
+            const farbe = ausgewaehltesGeschlecht === 'male' ? BLAU : ROTBRAUN;
+            return [
+                {
+                    label: bezeichnung + 'Inzidenz',
+                    data: zeitraeume.map(zeitraum => werte.get(zeitraum)?.incidence_rate ?? null),
+                    borderColor: farbe, backgroundColor: farbe
+                },
+                {
+                    label: bezeichnung + 'Mortalität',
+                    data: zeitraeume.map(zeitraum => werte.get(zeitraum)?.mortality_rate ?? null),
+                    borderColor: farbe, backgroundColor: farbe, borderDash: [7, 5]
+                }
+            ];
+        });
         // Fehlende Zahlen bleiben in der Linie eine Lücke. Wir setzen dafür keine 0 ein
-        spalten = ['Zeitraum', 'Inzidenz pro 100’000', 'Mortalität pro 100’000'];
-        tabellenwerte = zeilen.map(zeile => [zeile.period, zeile.incidence_rate, zeile.mortality_rate]);
+        spalten = ['Zeitraum', ...geschlechter.flatMap(ausgewaehltesGeschlecht => {
+            const bezeichnung = GESCHLECHTER[ausgewaehltesGeschlecht] + ' · ';
+            return [bezeichnung + 'Inzidenz pro 100’000', bezeichnung + 'Mortalität pro 100’000'];
+        })];
+        tabellenwerte = zeitraeume.map(zeitraum => [zeitraum, ...geschlechter.flatMap(ausgewaehltesGeschlecht => {
+            const zeile = zeilen.find(zeile => zeile.sex === ausgewaehltesGeschlecht && zeile.period === zeitraum);
+            return [zeile?.incidence_rate ?? null, zeile?.mortality_rate ?? null];
+        })]);
     }
 
     // Hier suchen wir die häufigsten Krebsarten bei den 20- bis 29-Jährigen
@@ -303,31 +390,31 @@ function filterEinrichten(kennung) {
     });
 }
 
+async function datenLaden() {
+    // fetch fragt die PHP-Datei an. Mit await warten wir auf die Antwort
+    const antwort = await fetch(DATEN_URL);
+    // Wenn der Server einen Fehler meldet, machen wir hier nicht weiter
+    if (!antwort.ok) {
+        throw new Error('HTTP-Status ' + antwort.status);
+    }
+    // Wir prüfen, ob die PHP-Datei wirklich Daten im JSON-Format liefert
+    const contentType = antwort.headers.get('content-type') ?? '';
+    if (!contentType.includes('application/json')) {
+        throw new Error('Die Antwort ist kein JSON.');
+    }
+    // Hier lesen wir die Daten aus der Antwort
+    const zeilen = await antwort.json();
+    // Wir erwarten eine Liste von Datenzeilen
+    if (!Array.isArray(zeilen)) {
+        throw new Error('Der Datenvertrag verlangt eine Liste von Datensätzen.');
+    }
+    return datenAnpassen(zeilen);
+}
+
 // Beim Öffnen der Seite laden wir die Daten und bereiten die Diagramme und Knöpfe vor
 async function starten() {
     try {
-        // fetch fragt die PHP-Datei an. Mit await warten wir auf die Antwort
-        const antwort = await fetch(DATEN_URL);
-        // Wenn der Server einen Fehler meldet, machen wir hier nicht weiter
-        if (!antwort.ok) {
-            throw new Error('HTTP-Status ' + antwort.status);
-        }
-        // Wir prüfen, ob die PHP-Datei wirklich Daten im JSON-Format liefert
-        const contentType = antwort.headers.get('content-type') ?? '';
-        if (!contentType.includes('application/json')) {
-            throw new Error('Die Antwort ist kein JSON.');
-        }
-        // Hier lesen wir die Daten aus der Antwort
-        daten = await antwort.json();
-        // Wir erwarten eine Liste von Datenzeilen
-        if (!Array.isArray(daten)) {
-            throw new Error('Der Datenvertrag verlangt eine Liste von Datensätzen.');
-        }
-        daten = datenAnpassen(daten);
-        // Ohne Chart.js können wir keine Diagramme zeichnen
-        if (typeof Chart === 'undefined') {
-            throw new Error('Chart.js konnte nicht geladen werden. Internetverbindung prüfen.');
-        }
+        daten = await datenLaden();
         diagrammeErstellen();
         ['altersdiagramm', 'zeitdiagramm', 'krebsartendiagramm'].forEach(kennung => {
             render(kennung);
@@ -343,4 +430,4 @@ async function starten() {
     }
 }
 // Sobald diese Datei geladen ist, starten wir alles
-starten();
+void starten();

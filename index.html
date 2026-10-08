@@ -11,8 +11,8 @@
     <link rel="stylesheet" href="style.css">
 
     <!-- Chart.js zeichnet Diagramme. Unser script.js sagt ihm, welche Zahlen/Daten es zeigen soll. -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.5.1/dist/chart.umd.min.js" defer></script>
-    <script src="script.js" defer></script>
+    <script src="vendor/chart.umd.min.js" defer></script>
+    <script src="script.js?v=20261008-krebsartenraster" defer></script>
   </head>
   <body>
     <main class="layout">
@@ -154,6 +154,7 @@
               </div>
             </details>
             <p class="chart-note">
+              Werte über 6000 werden bei «+6000» gekürzt dargestellt. Die genauen Zahlen stehen im Tooltip und in der Tabelle.
             </p>
 
           </figure>
@@ -225,11 +226,9 @@
 
             </figcaption>
 
-            <!-- Mit diesen Knöpfen wählen wir beide Geschlechter, Frauen oder Männer. -->
+            <!-- Dieser Knopf zeigt Frauen und Männer gemeinsam als getrennte Linien. -->
             <div class="filter-group" data-filter-group="zeitdiagramm" role="group" aria-label="Geschlecht für Inzidenz und Mortalität im Zeitverlauf">
-              <button type="button" class="filter-btn active" data-value="total" aria-pressed="true">Beide Geschlechter</button>
-              <button type="button" class="filter-btn" data-value="female" aria-pressed="false">Frauen</button>
-              <button type="button" class="filter-btn" data-value="male" aria-pressed="false">Männer</button>
+              <button type="button" class="filter-btn active" data-value="comparison" aria-pressed="true">Frauen &amp; Männer</button>
             </div>
             <!-- canvas ist die Zeichenfläche. Hier zeichnet Chart.js das Diagramm. -->
             <div class="chart-container">
@@ -245,15 +244,6 @@
               <div id="zeitdiagramm-tabelle" class="table-wrap">
               </div>
             </details>
-            <p class="chart-note">
-              Erfundene Platzhalterwerte; keine Grundlage
-              für die Aussagen der Geschichte. Beide Linien
-              verwenden dieselbe Skala. Inzidenz und
-              Mortalität sind Bevölkerungsraten; daraus
-              lässt sich keine Überlebenswahrscheinlichkeit
-              berechnen.
-            </p>
-
           </figure>
           <p>
             Die Daten zeigen dabei etwas, das viele überrascht.
@@ -332,14 +322,11 @@
               <div id="krebsartendiagramm-tabelle" class="table-wrap">
               </div>
             </details>
-            <p class="chart-note">
-              Erfundene Platzhalterwerte; keine Grundlage für die Aussagen der Geschichte.
-            </p>
 
           </figure>
           <p>
             Auch Lisas Diagnose gehört dazu. Sie erkrankte an
-            einem Hodgkin-Lymphom, einer Krebsart, von der sie vor
+            einem Hodgkin-Lymphom (Lymphdrüsenkrebs), einer Krebsart, von der sie vor
             ihrer Erkrankung noch nie gehört hatte. Ein Blick auf
             die Daten zeigt jedoch, dass diese Diagnose bei den
             20- bis 29-Jährigen zu den häufigsten Krebsarten
@@ -416,11 +403,10 @@
         </div>
       </section>
 
-      <!-- Ganz unten steht, woher unsere Daten kommen sollen. -->
+      <!-- Ganz unten steht, woher unsere Daten kommen. -->
       <footer class="footer-copy">
-        Geplante Datenquelle: Bundesamt für Statistik, stats.swiss ·
-        DF_STATKREBS_NUM_RATES. Aktuell werden ausschliesslich erfundene
-        Platzhalterwerte angezeigt.
+        Datenquelle: Bundesamt für Statistik, stats.swiss ·
+        DF_STATKREBS_NUM_RATES.
       </footer>
     </main>
   </body>
