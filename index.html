@@ -5,25 +5,52 @@
   <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>Zu jung dafür?</title>
+    <title>Krebs kennt kein Alter · Zu jung dafür?</title>
 
     <!-- Verbindung zu CSS Datei die das Design bestimmt -->
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="style.css?v=20261008-intro-kurz">
 
     <!-- Chart.js zeichnet Diagramme. Unser script.js sagt ihm, welche Zahlen/Daten es zeigen soll. -->
     <script src="vendor/chart.umd.min.js" defer></script>
-    <script src="script.js?v=20261008-krebsartenraster" defer></script>
+    <script src="script.js?v=20261008-intro-kurz" defer></script>
   </head>
   <body>
-    <main class="layout">
+    <main>
+      <section class="dna-scrolly" id="dna-intro" aria-labelledby="dna-titel">
+        <div class="dna-stage">
+          <video class="dna-video" id="dna-video" src="dna.mp4" muted playsinline preload="auto" aria-hidden="true"></video>
+          <div class="dna-tint" aria-hidden="true"></div>
+          <div class="dna-vignette" aria-hidden="true"></div>
+          <div class="dna-shade" id="dna-shade" aria-hidden="true"></div>
+
+          <div class="dna-layer dna-title" id="dna-title">
+            <div>
+              <h1 id="dna-titel">Krebs kennt<br>kein Alter</h1>
+              <p>Eine Data Story über Krebserkrankungen bei jungen Erwachsenen</p>
+            </div>
+          </div>
+
+          <div class="dna-layer dna-counter" id="dna-counter" aria-hidden="true">
+            <div>
+              <div class="dna-number" id="dna-number">100</div>
+              <div class="dna-number-label">Jahre</div>
+            </div>
+          </div>
+
+          <div class="dna-layer dna-question" id="dna-question" aria-hidden="true">
+            <p>Zu jung dafür?</p>
+          </div>
+
+          <div class="dna-hint" id="dna-hint" aria-hidden="true">Scrollen</div>
+          <a class="dna-skip" href="#geschichte">Zur Geschichte ↓</a>
+        </div>
+      </section>
+
+      <div class="layout" id="geschichte" tabindex="-1">
 
       <!-- grosser Titel und Untertitel. -->
       <header class="header-inner">
-        <p class="ready-tag">
-          Data Story · Interaktive Medien 3
-        </p>
 
-        <h1 class="hero-text">Zu jung<br><em>dafür?</em></h1>
         <p class="hero-sub">
           Krebs bei jungen Erwachsenen in der Schweiz – Lisas Geschichte und ein Blick auf die Zahlen.
         </p>
@@ -408,6 +435,7 @@
         Datenquelle: Bundesamt für Statistik, stats.swiss ·
         DF_STATKREBS_NUM_RATES.
       </footer>
+      </div>
     </main>
   </body>
 </html>

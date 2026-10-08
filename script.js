@@ -429,5 +429,86 @@ async function starten() {
         console.error(fehler); // Den Fehler sehen wir auch in der Browser-Konsole
     }
 }
+function introBereich(fortschritt, start, ende) {
+    return Math.max(0, Math.min(1, (fortschritt - start) / (ende - start)));
+}
+
+function introEinrichten() {
+    const bereich = document.getElementById('dna-intro');
+    const video = document.querySelector('video#dna-video');
+    if (!bereich || !video) {
+        return;
+    }
+
+    const buehne = bereich.querySelector('.dna-stage');
+    const titel = document.getElementById('dna-title');
+    const zaehler = document.getElementById('dna-counter');
+    const zahl = document.getElementById('dna-number');
+    const frage = document.getElementById('dna-question');
+    const hinweis = document.getElementById('dna-hint');
+    const abdunklung = document.getElementById('dna-shade');
+    const bewegung = window.matchMedia('(prefers-reduced-motion: reduce)');
+    let gewuenschteZeit = 0;
+    let bildAngefordert = false;
+
+    function videoAktualisieren() {
+        if (!Number.isFinite(video.duration) || video.seeking) {
+            return;
+        }
+        if (Math.abs(video.currentTime - gewuenschteZeit) > 0.04) {
+            video.currentTime = gewuenschteZeit;
+        }
+    }
+
+    function introAktualisieren() {
+        bildAngefordert = false;
+        const scrollstrecke = Math.max(1, bereich.offsetHeight - buehne.offsetHeight);
+        const fortschritt = bewegung.matches ? 0 : Math.max(0, Math.min(1,
+            -bereich.getBoundingClientRect().top / scrollstrecke));
+        const ausblenden = introBereich(fortschritt, 0.01, 0.06);
+        titel.style.opacity = String(1 - ausblenden);
+        titel.style.transform = 'scale(' + (1 + ausblenden * 0.4) + ')';
+        hinweis.style.opacity = String(1 - introBereich(fortschritt, 0, 0.04));
+        video.style.transform = 'scale(' + (1 + introBereich(fortschritt, 0, 0.5) * 0.6) + ')';
+        abdunklung.style.opacity = String(introBereich(fortschritt, 0.04, 0.1) * 0.45);
+
+        zaehler.style.opacity = String(introBereich(fortschritt, 0.06, 0.1) *
+            (1 - introBereich(fortschritt, 0.7, 0.75)));
+        zahl.textContent = String(Math.round(100 - 80 * introBereich(fortschritt, 0.1, 0.58)));
+        const frageSichtbar = introBereich(fortschritt, 0.74, 0.8);
+        frage.style.opacity = String(frageSichtbar);
+        frage.style.transform = 'translateY(' + ((1 - frageSichtbar) * 30) + 'px)';
+
+        if (Number.isFinite(video.duration)) {
+            gewuenschteZeit = introBereich(fortschritt, 0, 0.8) * Math.max(0, video.duration - 0.05);
+            videoAktualisieren();
+        }
+    }
+
+    function introAnfordern() {
+        if (!bildAngefordert) {
+            bildAngefordert = true;
+            window.requestAnimationFrame(introAktualisieren);
+        }
+    }
+
+    function videoFreigeben() {
+        void video.play().then(() => {
+            video.pause();
+            introAnfordern();
+        }).catch(() => { introAnfordern(); });
+    }
+
+    bereich.classList.add('dna-aktiv');
+    video.addEventListener('loadeddata', introAnfordern);
+    video.addEventListener('seeked', videoAktualisieren);
+    window.addEventListener('scroll', introAnfordern, { passive: true });
+    window.addEventListener('resize', introAnfordern);
+    window.addEventListener('touchstart', videoFreigeben, { once: true, passive: true });
+    bewegung.addEventListener('change', introAnfordern);
+    introAktualisieren();
+}
+
 // Sobald diese Datei geladen ist, starten wir alles
+introEinrichten();
 void starten();

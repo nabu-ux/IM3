@@ -1,10 +1,10 @@
 /* Die Farben und die Breite unserer Seite */
 :root {
-  color-scheme: light;
-  --bg: #ffffff;
-  --text: #000000;
-  --border: #c5c5c5;   /* Rahmen und Linien */
-  --accent: #954139;   /* Titel und wichtige Texte */
+  color-scheme: dark;
+  --bg: #954139;
+  --text: #fff4f1;
+  --border: rgba(255, 244, 241, .3);   /* Rahmen und Linien */
+  --accent: #f3b6a6;   /* Titel und wichtige Texte */
 }
 
 * { box-sizing: border-box; }
@@ -52,14 +52,14 @@ header.header-inner {
 }
 
 /* Schrift und Farbe für grosser Titel und Zitate */
-h1.hero-text,
+.hero-text,
 .story-body > .quote {
-  font-family: Georgia, 'Times New Roman', serif;
+  font-family: Impact, 'Arial Narrow', sans-serif;
   font-weight: 500;
   color: var(--accent);
 }
 
-h1.hero-text {
+.hero-text {
   /* Die Schrift wächst mit dem Fenster. Sie bleibt zwischen 40 und 64 Pixel gross. */
   font-size: clamp(40px, 9vw, 64px);
   line-height: 1.02;
@@ -68,8 +68,8 @@ h1.hero-text {
   text-wrap: balance; /*  Wörter sollen sich gleichmässig auf die Titelzeilen verteilen. */
 }
 
-/* Das Wort in em (Titel) ist schon kursiv. Hier machen wir es aber noch schwarz. */
-h1.hero-text em {
+/* Das Wort in em (Titel) ist schon kursiv. Hier bekommt es die normale Textfarbe. */
+.hero-text em {
   color: var(--text);
 }
 
@@ -118,6 +118,12 @@ section.story-section + section.story-section { border-top: 1px solid var(--bord
 
 /* Kasten um ein Diagramm. */
 .card {
+  --bg: #ffffff;
+  --text: #000000;
+  --border: #c5c5c5;
+  --accent: #954139;
+  color-scheme: light;
+  color: var(--text);
   background: var(--bg);
   border: 1px solid var(--border);
   border-radius: 4px;
@@ -245,4 +251,156 @@ footer.footer-copy {
   margin-top: 56px;
   padding-top: 22px;
   line-height: 1.6;
+}
+
+.dna-scrolly {
+  position: relative;
+  height: 100vh;
+  font-family: Impact, 'Arial Narrow', sans-serif;
+  color: #fff4f1;
+  background: #2a0306;
+}
+
+.dna-scrolly.dna-aktiv { height: 450vh; }
+
+.dna-stage {
+  position: sticky;
+  top: 0;
+  height: 100vh;
+  overflow: hidden;
+  isolation: isolate;
+  background: radial-gradient(ellipse at center, #7a0610, #2a0306);
+}
+
+.dna-video,
+.dna-tint,
+.dna-vignette,
+.dna-shade {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+}
+
+.dna-video { object-fit: cover; }
+
+.dna-tint {
+  background: rgba(212, 20, 31, .65);
+  mix-blend-mode: color;
+}
+
+.dna-vignette {
+  background: radial-gradient(ellipse at center, transparent 40%, rgba(20, 0, 3, .7) 100%);
+}
+
+.dna-shade {
+  background: #140003;
+  opacity: 0;
+}
+
+.dna-layer {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 16px;
+  text-align: center;
+  pointer-events: none;
+}
+
+.dna-title h1,
+.dna-number,
+.dna-question p {
+  font-weight: 900;
+  color: #fff4f1;
+  text-shadow: 0 4px 30px rgba(30, 0, 4, .9), 0 0 80px rgba(30, 0, 4, .8);
+}
+
+.dna-title h1 {
+  margin: 0;
+  font-size: clamp(42px, 9vw, 110px);
+  line-height: 1.1;
+  text-transform: uppercase;
+  text-wrap: balance;
+}
+
+.dna-title p {
+  max-width: 30ch;
+  margin: 16px auto 0;
+  font-size: 18px;
+  line-height: 1.55;
+  text-shadow: 0 2px 16px #1e0004;
+}
+
+.dna-counter,
+.dna-question { opacity: 0; }
+
+.dna-number {
+  font-size: clamp(144px, 38vw, 440px);
+  line-height: .8;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -.02em;
+}
+
+.dna-number-label {
+  margin-top: 16px;
+  font-size: 14px;
+  letter-spacing: .2em;
+  text-transform: uppercase;
+}
+
+.dna-question p {
+  margin: 0;
+  font-size: clamp(48px, 13vw, 150px);
+  line-height: .95;
+  text-transform: uppercase;
+  text-wrap: balance;
+}
+
+.dna-hint {
+  position: absolute;
+  bottom: calc(28px + env(safe-area-inset-bottom, 0px));
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 12px;
+  letter-spacing: .18em;
+  text-transform: uppercase;
+  text-shadow: 0 2px 10px #1e0004;
+}
+
+.dna-hint::after {
+  content: '↓';
+  display: block;
+  margin-top: 10px;
+  font-size: 28px;
+  text-align: center;
+}
+
+.dna-skip {
+  position: absolute;
+  top: 20px;
+  right: 20px;
+  padding: 8px 12px;
+  border: 1px solid rgba(255, 244, 241, .5);
+  border-radius: 999px;
+  background: rgba(42, 3, 6, .5);
+  color: #fff4f1;
+  font-size: 13px;
+  text-decoration: none;
+}
+
+.dna-skip:hover { background: #7a0610; }
+
+.dna-skip:focus-visible {
+  outline: 2px solid #fff4f1;
+  outline-offset: 3px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .dna-scrolly.dna-aktiv { height: 100vh; }
+  .dna-stage { position: relative; }
+  .dna-hint,
+  .dna-counter,
+  .dna-question { display: none; }
 }

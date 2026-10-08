@@ -2,6 +2,10 @@ Zu jung dafür?
 Kurzbeschreibung
 «Zu jung dafür?» ist eine Data Story über Krebserkrankungen bei jungen Erwachsenen in der Schweiz und im Rahmen des dritten Semester des Moduls interaktive Medien entstanden. Lisas Geschichte führt durch drei interaktive Grafiken: Neuerkrankungen nach Alter, die Entwicklung von Neuerkrankungs- und Sterberaten sowie häufige Krebsarten bei 20- bis 29-Jährigen. Unsere Datensätze sind Krebsdaten des Bundesamts für Statistik: https://stats.swiss/vis?lc=de&df%5Bds%5D=disseminate&df%5Bid%5D=DF_STATKREBS_NUM_RATES&df%5Bag%5D=CH1.STATKREBS&df%5Bvs%5D=1.0.0&dq=1.28%252B0.1%252B2%252B_T.2018.Y20T24%252BY25T29.1%252B2.200%252B1000&to%5BTIME%5D=false&vw=tb
 
+Frontend-Aufbau
+Vor Lisas Geschichte steht ein DNA-Video mit einer scrollgesteuerten Altersanzeige von 100 bis 20 Jahren. Der Einstieg verwendet HTML, CSS und JavaScript ohne zusätzliches Animations-Framework. Über «Zur Geschichte» lässt er sich überspringen; bei reduzierter Bewegung bleibt er statisch.
+Die Datei dna.mp4 liegt neben index.html, style.css und script.js und muss beim Hochladen mitgenommen werden. Die drei Diagramme laden weiterhin die Daten aus unload.php; Chart.js liegt im Ordner vendor.
+
 Learnings (Backend)
 Wir haben verstanden, dass KI prompten sehr hilft, jedoch wichtig ist, dass wir den Inhalt verstehen und der künstlichen Intelligenz nicht einfach blind vertrauen. 
 Ein weiteres Learning war, dass wir im Vorhinein wissen mussten, was für Daten man für eine Datengeschichte braucht und wieso. Visualisierungen auf Papier vor der Datentransformation haben uns daher sehr weitergeholfen.
