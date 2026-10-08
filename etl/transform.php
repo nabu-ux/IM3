@@ -23,6 +23,7 @@ $rawRows = include __DIR__ . '/extract.php';
 // Der Zieldatensatz hat keine Regionsspalte -> wir behalten nur die ganze Schweiz.
 $region = 'Schweiz';
 
+// Übersetzung der Geschlechtsbezeichnungen aus der CSV auf englisch für die Zieldatenbank.
 $genderMap = [
     'Männlich' => 'male',
     'Weiblich' => 'female',
@@ -54,6 +55,7 @@ $ageGroupMap = [
 ];
 
 // Indikator + Kennzahl -> neue Variable.
+// Übersetzungstabelle für Indikator-Kombinationen in einheitliche Spaltennamen für die Datenbank.
 $metricMap = [
     'Inzidenz|Altersspezifische Rate'                  => 'incidence_rate',
     'Mortalität|Altersspezifische Rate'                => 'mortality_rate',
@@ -66,28 +68,28 @@ $metricMap = [
 // steht nicht in der CSV, lässt sich aber zurückrechnen:
 //   Bevölkerung = Fälle / Rate × 100 000
 // Dafür nehmen wir die Inzidenz von «Alle Krebsarten», weil dort (anders als
-// bei seltenen Krebsarten) nie 0 Fälle stehen.
+// bei seltenen Krebsarten) nie 0 Fälle stehen und die meisten Werte enthalten sind, somit ist die Rückrechnung am genauesten.
 $referenceCancerType = 'Alle Krebsarten (total) (C00-C97*)';
-$ratePer = 100000;
-$decimals = 4;
+$ratePer = 100000; //Bezugsgröße für Raten (pro 100'000 Personen)
+$decimals = 2;
 
 $audit = [
-    'input_rows'           => 0,
-    'other_region'         => 0,
-    'missing_status_m'     => 0,
-    'overlapping_age_group' => 0,
-    'unknown_metric'       => 0,
-    'invalid_value'        => 0,
-    'incomplete_groups'    => 0,
-    'missing_population'   => 0,
-    'output_rows'          => 0,
+    'input_rows'           => 0, // Eingelesene Zeilen gesamt
+    'other_region'         => 0, // Ignorierte Zeilen aus anderen Regionen
+    'missing_status_m'     => 0, // Ignorierte Zeilen mit Status M
+    'overlapping_age_group' => 0, // Ignorierte Zeilen mit überlappenden/nicht benötigten Altersgruppen
+    'unknown_metric'       => 0, // Unbekannte Kennzahlen
+    'invalid_value'        => 0, // Ungültige Werte
+    'incomplete_groups'    => 0, // Zeilen mit unvollständigen Gruppen
+    'missing_population'   => 0, // Zeilen ohne brechenbare Bevölkerung (Referenz-Krebsart nicht gefunden)
+    'output_rows'          => 0, // Ausgegebene Zeilen gesamt
 ];
 
 // ---------------------------------------------------------------------------
 // Kleine, einzeln prüfbare Funktionen
 // ---------------------------------------------------------------------------
 
-/** Regel «Nicht benötigte Daten entfernen» + «Umbenennen». */
+/** Regel «Nicht benötigte Daten entfernen» + «Umbenennen». */ //Extrahiert relevante Spalten aus einer Rohzeile und weist standardisierte Schlüssel zu. */
 function selectAndRename(array $row): array
 {
     return [
@@ -110,13 +112,13 @@ function isMissingStatus(string $status): bool
 }
 
 /** Regel «Fehlende Werte»: leer, nicht numerisch oder negativ -> null. */
-function parseValue(string $value): ?float
+function parseValue(string $value): ?float //Wandelt den Textwert in eine Fliesskommazahl um; liefert null bei ungültigen oder negativen Werten
 {
-    if ($value === '' || !is_numeric($value)) {
+    if ($value === '' || !is_numeric($value)) { // Gibt null zurück, wenn der String leer oder keine Zahl ist.
         return null;
     }
-    $number = (float) $value;
-    return $number < 0 ? null : $number;
+    $number = (float) $value; // String in Float
+    return $number < 0 ? null : $number; // null bei negativen Zahlen
 }
 
 // Geschlecht aus der CSV zu male female, null bei allen anderen Werten
@@ -131,13 +133,13 @@ function mapAgeGroup(string $ageGroup, array $ageGroupMap): ?string
     return $ageGroupMap[$ageGroup] ?? null;
 }
 
-/** Indikator + Kennzahl -> incidence_rate / mortality_rate / ... oder null. */
+/** Kombinationen Indikator + Kennzahl werden zugeordnet: incidence_rate / mortality_rate / ... oder null. */
 function mapMetric(string $indicator, string $measure, array $metricMap): ?string
 {
     return $metricMap[$indicator . '|' . $measure] ?? null;
 }
 
-/** Eindeutiger Text-Schlüssel aus mehreren Teilen. */
+/** Eindeutiger Text-Schlüssel aus mehreren Teilen. */ //Mehrer Angaben (z.B. Krebsart, Geschlecht) mit | zu eindeutigem Schlüssel -> zusammengehörige Daten können genau einer Gruppe zugeordent und gefunden werden.
 function buildKey(string ...$parts): string
 {
     return implode('|', $parts);
@@ -159,21 +161,21 @@ function sumValues(array $values): float
  * Raten zweier 5-Jahres-Gruppen: bevölkerungsgewichteter Mittelwert.
  * $rates und $populations haben dieselben Schlüssel (die 5-Jahres-Gruppen).
  */
-function weightedRate(array $rates, array $populations): float
+function weightedRate(array $rates, array $populations): float //Berechnet den nach Populationsgrösse gewichteten Mittelwert für Raten.
 {
     $weightedSum = 0.0;
-    foreach ($rates as $sourceAge => $rate) {
+    foreach ($rates as $sourceAge => $rate) { // Multipliziert jede Rate mit der dazugehörigen Bevölkerungszahl und addiert sie auf.
         $weightedSum += $rate * $populations[$sourceAge];
     }
     return $weightedSum / array_sum($populations);
 }
 
 /** Hat die Gruppe für jede Kennzahl genau die erwarteten 5-Jahres-Werte? */
-function isCompleteGroup(array $values, array $metrics, array $expectedSources): bool
+function isCompleteGroup(array $values, array $metrics, array $expectedSources): bool //Überprüft, ob alle Werte vorhanden sind
 {
-    foreach ($metrics as $metric) {
+    foreach ($metrics as $metric) { //geht Kennzahlen durch, holt Altersgruppenschlüssel für Kennzahl
         $found = array_keys($values[$metric] ?? []);
-        sort($found);
+        sort($found); //sortiert alphabetisch
         if ($found !== $expectedSources) {
             return false;
         }
@@ -183,17 +185,18 @@ function isCompleteGroup(array $values, array $metrics, array $expectedSources):
 
 // Welche 5-Jahres-Gruppen gehören zu welcher 10-Jahres-Gruppe?
 // ['0-9' => ['0-4 Jahre', '5-9 Jahre'], ...] – sortiert für den Vergleich oben.
+// 10 Jahres Gruppe werden 5 Jahresgruppen zugeordnet und von jung nach alt sortiert.
 $sourcesPerGroup = [];
-foreach ($ageGroupMap as $source => $target) {
+foreach ($ageGroupMap as $source => $target) { //geht Quellen-Altersgruppen durch, ordnet sie der Ziel-Altersgruppe zu
     $sourcesPerGroup[$target][] = $source;
 }
 foreach ($sourcesPerGroup as &$sources) {
     sort($sources);
 }
-unset($sources);
+unset($sources); // Löscht refernz Variable, um versehentliche Änderungen zu vermeiden.
 
 $metrics = array_values($metricMap);
-$ageOrder = array_flip(array_keys($sourcesPerGroup)); // '0-9' => 0, ... '80+' => 8
+$ageOrder = array_flip(array_keys($sourcesPerGroup)); // jung zu alt sortiert: '0-9' => 0, ... '80+' => 8
 
 // ---------------------------------------------------------------------------
 // Schritt 1: alle Rohzeilen durchlaufen, filtern und pro Gruppe sammeln
@@ -201,45 +204,45 @@ $ageOrder = array_flip(array_keys($sourcesPerGroup)); // '0-9' => 0, ... '80+' =
 $groups = [];
 
 
-foreach ($rawRows as $rawRow) {
+foreach ($rawRows as $rawRow) { //Schleife für Zeilen der CSV.
     $audit['input_rows']++;
-    $row = selectAndRename($rawRow);
+    $row = selectAndRename($rawRow); //Benennung wird vereinheitlicht
 
-    if ($row['region'] !== $region) {
+    if ($row['region'] !== $region) { //Filtert Region
         $audit['other_region']++;
         continue;
     }
 
-    if (isMissingStatus($row['status'])) {
+    if (isMissingStatus($row['status'])) { // Zeilen mit Status 'M' werden herausgefiltert
         $audit['missing_status_m']++;
         continue;
     }
-    $gender = mapGender($row['gender'], $genderMap);
+    $gender = mapGender($row['gender'], $genderMap); //Umbenennung und Abbruch, wenn unbekannt
     if ($gender === null) {
         continue;
     }
 
-    $ageGroup = mapAgeGroup($row['age_group'], $ageGroupMap);
+    $ageGroup = mapAgeGroup($row['age_group'], $ageGroupMap); //Umwandlung Altersgruppe, Abbruch bei überlappenden Gruppen
     if ($ageGroup === null) {
         $audit['overlapping_age_group']++;
         continue;
     }
 
-    $metric = mapMetric($row['indicator'], $row['measure'], $metricMap);
+    $metric = mapMetric($row['indicator'], $row['measure'], $metricMap); //Umwandlung in Kennzahlkombinationen, Abbruch
     if ($metric === null) {
         $audit['unknown_metric']++;
         continue;
     }
 
-    $value = parseValue($row['value']);
+    $value = parseValue($row['value']); //Umwandlung in Float, Abbruch bei ungültigen Werten
     if ($value === null) {
         $audit['invalid_value']++;
         continue;
     }
 
-    $key = buildKey($row['cancer_type'], $gender, $row['time_span'], $ageGroup);
+    $key = buildKey($row['cancer_type'], $gender, $row['time_span'], $ageGroup); // Erstellt eindeutigen Schlüssel für Zielgruppe
 
-    if (!isset($groups[$key])) {
+    if (!isset($groups[$key])) { //Falls die Zielgruppe im Array $groups noch nicht existiert, erstelle die Grundstruktur
         $groups[$key] = [
             'time_span'   => $row['time_span'],
             'age_group'   => $ageGroup,
@@ -249,12 +252,12 @@ foreach ($rawRows as $rawRow) {
         ];
     }
 
-    // Derselbe Wert zweimal wäre ein Fehler in der Quelle, kein Datenverlust.
+    // Prüft: Derselbe Wert zweimal wäre ein Fehler in der Quelle, kein Datenverlust.
     if (isset($groups[$key]['values'][$metric][$row['age_group']])) {
         throw new RuntimeException("Doppelter Wert: {$key} / {$metric} / {$row['age_group']}");
     }
 
-    $groups[$key]['values'][$metric][$row['age_group']] = $value;
+    $groups[$key]['values'][$metric][$row['age_group']] = $value; //Speichert Wert in der Zielgruppe unter der Kennzahl und der 5-Jahres-Altersgruppe
 
 }
 
@@ -289,7 +292,7 @@ foreach ($groups as $group) {
     }
 }
 
-if (count($populations) === 0) {
+if (count($populations) === 0) { //Wirft Fehler aus, wenns nicht berechnet werden kann
     throw new RuntimeException(
         "Keine Bevölkerungszahlen berechnet: Referenz-Krebsart «{$referenceCancerType}» nicht gefunden."
     );
