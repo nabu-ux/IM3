@@ -71,7 +71,7 @@ $metricMap = [
 // bei seltenen Krebsarten) nie 0 Fälle stehen und die meisten Werte enthalten sind, somit ist die Rückrechnung am genauesten.
 $referenceCancerType = 'Alle Krebsarten (total) (C00-C97*)';
 $ratePer = 100000; //Bezugsgröße für Raten (pro 100'000 Personen)
-$decimals = 2;
+$decimals = 4;
 
 $audit = [
     'input_rows'           => 0, // Eingelesene Zeilen gesamt
