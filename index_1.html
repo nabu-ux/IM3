@@ -1,0 +1,427 @@
+<!DOCTYPE html>
+<html lang="de">
+
+  <!-- Seitentitel und dass es auf dem Handy richtig angezeigt wird. -->
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Zu jung dafür?</title>
+
+    <!-- Verbindung zu CSS Datei die das Design bestimmt -->
+    <link rel="stylesheet" href="style_1.css">
+
+    <!-- Chart.js zeichnet Diagramme. Unser script.js sagt ihm, welche Zahlen/Daten es zeigen soll. -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.5.1/dist/chart.umd.min.js" defer></script>
+    <script src="script.js" defer></script>
+  </head>
+  <body>
+    <main class="layout">
+
+      <!-- grosser Titel und Untertitel. -->
+      <header class="header-inner">
+        <p class="ready-tag">
+          Data Story · Interaktive Medien 3
+        </p>
+
+        <h1 class="hero-text">Zu jung<br><em>dafür?</em></h1>
+        <p class="hero-sub">
+          Krebs bei jungen Erwachsenen in der Schweiz – Lisas Geschichte und ein Blick auf die Zahlen.
+        </p>
+
+
+      </header>
+
+      <!-- Kapitel 1: Lisas Geschichte -->
+      <section class="story-section" id="kapitel-1">
+        <div class="story-body">
+          <h2 class="section-title">Lisas Geschichte</h2>
+          <p>
+            Lisa ist 21 Jahre alt. Sie studiert, lebt in einer WG
+            und verbringt die meiste Zeit mit Dingen, die viele
+            Menschen in ihrem Alter beschäftigen. Mit Freund:innen
+            unterwegs sein, spontane Wochenendtrips planen,
+            überteuerten Kaffee in kleinen Cafés trinken und
+            irgendwie herausfinden, wie das eigene Leben
+            eigentlich aussehen soll.
+          </p>
+
+          <p>
+            Sie hat ständig neue Interessen, probiert Dinge aus
+            und schmiedet Pläne für die Zukunft. Eigentlich geht
+            es ihr so wie den meisten jungen Leuten.
+          </p>
+
+          <p>
+            Bis zu dem Tag, als sich ihre Lebensrealität auf einen Schlag veränderte.
+          </p>
+
+          <p>
+            In einem kleinen Zimmer mit sehr weissen Wänden sitzt
+            sie vor einem grossen Tisch, auf dem sich Papiere
+            stapeln und ein Computer steht. Dahinter sitzt eine
+            Frau in weissem Kittel.
+          </p>
+
+          <p>
+            Die letzten Wochen waren für Lisa sehr anstrengend und
+            geprägt von Untersuchungen, Arztterminen und einem
+            kurzen Krankenhausaufenthalt. Alles wegen eines
+            geschwollenen Lymphknotens im Hals.
+          </p>
+
+          <p>
+            An diesem Tag geht sie in das Zimmer hinein mit der
+            klitzekleinen Hoffnung, dass doch alles ganz harmlos
+            ist. Doch keine 15 Minuten später verlässt sie es mit
+            Tränen in den Augen, einer Krebsdiagnose und einem
+            Leben, das in einer Sekunde auf den Kopf gestellt
+            wurde.
+          </p>
+
+          <p>
+            Plötzlich besteht ihr Alltag nicht mehr aus
+            Vorlesungen, Freund:innen und Plänen für den Sommer.
+            Stattdessen lernt sie, was bestimmte Blutwerte
+            bedeuten. Sie verbringt ihre Stunden im Bett oder im
+            Krankenhaus und fragt sich, wie ihr Körper auf die
+            nächste Behandlung reagieren wird.
+          </p>
+
+          <p>
+            Vor allem aber stellt sie sich eine Frage, die sie
+            vorher nie beschäftigt hat: Warum passiert das
+            ausgerechnet jetzt?
+          </p>
+
+          <p>
+            Krebs war für Lisa immer etwas gewesen, das andere
+            Menschen betrifft. Vor allem ältere Menschen, nicht
+            Menschen Anfang zwanzig.
+          </p>
+
+          <p>
+            In der Zeit im Krankenhaus fiel ihr auf, dass sie
+            häufig die Jüngste auf der Krebsstation war. Die
+            Patient:innen neben ihr hätten oft ihre Grosseltern
+            sein können. Je länger sie dort sass, desto stärker
+            wurde ein Gedanke:
+          </p>
+
+          <p class="quote">
+            Wenn Krebs so häufig ist, warum kenne ich dann kaum
+            jemanden in meinem Alter, der betroffen ist?
+          </p>
+
+        </div>
+      </section>
+
+      <!-- Kapitel 2: Krebs und Alter -->
+      <section class="story-section" id="kapitel-2">
+        <div class="story-body">
+          <h2 class="section-title">Krebs und Alter</h2>
+
+          <!-- Hier beginnt der Diagrammkasten mit Titel, Knöpfen und Tabelle. -->
+          <figure class="card">
+            <figcaption>
+              <p class="chart-title">
+                Neuerkrankungen nach Altersklasse
+              </p>
+
+              <p class="chart-sub">
+                Schweiz · 2018–2022 · Anzahl Fälle
+              </p>
+
+            </figcaption>
+
+            <!-- Mit diesen Knöpfen wählen wir beide Geschlechter, Frauen oder Männer. -->
+            <div class="filter-group" data-filter-group="altersdiagramm" role="group" aria-label="Geschlecht für Neuerkrankungen nach Altersklasse">
+              <button type="button" class="filter-btn active" data-value="total" aria-pressed="true">Beide Geschlechter</button>
+              <button type="button" class="filter-btn" data-value="female" aria-pressed="false">Frauen</button>
+              <button type="button" class="filter-btn" data-value="male" aria-pressed="false">Männer</button>
+            </div>
+            <!-- canvas Zeichenfläche. Hier zeichnet Chart.js das Diagramm. -->
+            <div class="chart-container">
+              <canvas id="altersdiagramm" role="img" aria-label="Neuerkrankungen nach Altersklasse">Die Werte stehen in der Tabelle unter dem Diagramm.</canvas>
+            </div>
+            <p id="altersdiagramm-status" class="data-status" role="status">
+              Daten werden geladen …
+            </p>
+
+            <!-- Diese Tabelle kann man aufklappen. Zahlen/Daten von script.js -->
+            <details class="data-table">
+              <summary>Werte als Tabelle anzeigen</summary>
+              <div id="altersdiagramm-tabelle" class="table-wrap">
+              </div>
+            </details>
+            <p class="chart-note">
+            </p>
+
+          </figure>
+          <p>
+            Die Daten geben darauf eine erste Antwort. Krebs
+            gehört zu den häufigsten Krankheiten überhaupt.
+            Gleichzeitig zeigt sich aber ein klares Muster: Die
+            meisten Neuerkrankungen treten erst im höheren Alter
+            auf.
+          </p>
+
+          <p>
+            Die Altersgruppe der 20- bis 29-Jährigen nimmt nur
+            einen kleinen Teil aller Krebsdiagnosen ein. Genau
+            deshalb bleibt Krebs in jungen Jahren oft unsichtbar.
+            Viele Menschen erleben die Krankheit im Familien- oder
+            Bekanntenkreis erst deutlich später im Leben.
+          </p>
+
+          <p>
+            Für Lisa erklärt das, warum sich ihre Diagnose
+            zunächst so fremd angefühlt hat. Nicht weil junge
+            Menschen keinen Krebs bekommen, sondern weil sie ihn
+            deutlich seltener bekommen als ältere Menschen.
+          </p>
+
+          <p>
+            Es war also kein Zufall, dass die Krebsgeschichten,
+            die sie kannte, eher ältere Menschen betrafen. Die
+            Geschichten gingen ihr nicht aus dem Kopf, vor allem
+            weil sie meistens mit dem Tod endeten und in ihrer
+            Vorstellung ein Überleben von Krebs mehr einem Wunder
+            glich.
+          </p>
+
+          <p>
+            Darum vermied Lisa es lange Zeit, sich mit ihren
+            eigenen Chancen auseinanderzusetzen. Nicht weil sie
+            die Antwort nicht wissen wollte, sondern weil für sie
+            nicht infrage kam, dass ihr Leben jetzt schon zu Ende
+            sein sollte. Erst nach und nach beginnt sie sich damit
+            zu beschäftigen, wie Krebs in ihrer Altersgruppe
+            tatsächlich verläuft.
+          </p>
+
+        </div>
+      </section>
+
+      <!-- Kapitel 3: Ein Blick auf den Verlauf -->
+      <section class="story-section" id="kapitel-3">
+        <div class="story-body">
+          <h2 class="section-title">Ein Blick auf den Verlauf</h2>
+
+          <!-- Eine Frage aus Lisas Sicht führt zum nächsten Diagramm. -->
+          <p class="quote">
+            Ist ein tödlicher Verlauf heute seltener als früher?
+          </p>
+
+          <!-- Hier beginnt der Diagrammkasten mit Titel, Knöpfen und Tabelle. -->
+          <figure class="card">
+            <figcaption>
+              <p class="chart-title">
+                Inzidenz und Mortalität im Zeitverlauf
+              </p>
+
+              <p class="chart-sub">
+                Alter 20–29 · pro 100’000 Einwohner:innen · Fünfjahreszeiträume ab 1998
+              </p>
+
+            </figcaption>
+
+            <!-- Mit diesen Knöpfen wählen wir beide Geschlechter, Frauen oder Männer. -->
+            <div class="filter-group" data-filter-group="zeitdiagramm" role="group" aria-label="Geschlecht für Inzidenz und Mortalität im Zeitverlauf">
+              <button type="button" class="filter-btn active" data-value="total" aria-pressed="true">Beide Geschlechter</button>
+              <button type="button" class="filter-btn" data-value="female" aria-pressed="false">Frauen</button>
+              <button type="button" class="filter-btn" data-value="male" aria-pressed="false">Männer</button>
+            </div>
+            <!-- canvas ist die Zeichenfläche. Hier zeichnet Chart.js das Diagramm. -->
+            <div class="chart-container">
+              <canvas id="zeitdiagramm" role="img" aria-label="Inzidenz und Mortalität im Zeitverlauf">Die Werte stehen in der Tabelle unter dem Diagramm.</canvas>
+            </div>
+            <p id="zeitdiagramm-status" class="data-status" role="status">
+              Daten werden geladen …
+            </p>
+
+            <!-- Diese Tabelle kann man aufklappen. script.js trägt die Zahlen ein. -->
+            <details class="data-table">
+              <summary>Werte als Tabelle anzeigen</summary>
+              <div id="zeitdiagramm-tabelle" class="table-wrap">
+              </div>
+            </details>
+            <p class="chart-note">
+              Erfundene Platzhalterwerte; keine Grundlage
+              für die Aussagen der Geschichte. Beide Linien
+              verwenden dieselbe Skala. Inzidenz und
+              Mortalität sind Bevölkerungsraten; daraus
+              lässt sich keine Überlebenswahrscheinlichkeit
+              berechnen.
+            </p>
+
+          </figure>
+          <p>
+            Die Daten zeigen dabei etwas, das viele überrascht.
+            Während die Zahl der jährlichen Neuerkrankungen leicht
+            steigt, entwickelt sich die Sterblichkeitsrate
+            deutlich günstiger. Tödliche Verläufe werden dadurch
+            seltener als noch vor einigen Jahrzehnten.
+          </p>
+
+          <p>
+            Für Lisa bedeutet diese Erkenntnis etwas Wichtiges:
+            Krebs bedeutet nicht gleich den Tod. Vor allem in
+            ihrer Altersgruppe ist ein tödlicher Verlauf eher die
+            Ausnahme.
+          </p>
+
+          <p>
+            Erleichtert beginnt sie, sich intensiver mit ihrer
+            Erkrankung auseinanderzusetzen. Sie liest, spricht mit
+            Ärzt:innen und lernt Dinge über Krebs, die ihr vorher
+            völlig unbekannt waren.
+          </p>
+
+          <p>
+            Je mehr Lisa lernte, desto deutlicher wurde ihr, dass
+            Krebs bei jungen Menschen anders aussieht als bei
+            älteren Menschen. Viele der Krebsarten, über die im
+            Alltag häufig gesprochen wird, betreffen vor allem
+            ältere Menschen. Bei jungen Erwachsenen zeigt sich
+            dagegen ein anderes Muster.
+          </p>
+
+        </div>
+      </section>
+
+      <!-- Kapitel 4: Andere Krebsarten -->
+      <section class="story-section" id="kapitel-4">
+        <div class="story-body">
+          <h2 class="section-title">Andere Krebsarten</h2>
+
+          <!-- Eine Frage aus Lisas Sicht führt zum nächsten Diagramm. -->
+          <p class="quote">
+            Welche Krebsarten betreffen Menschen in meinem Alter?
+          </p>
+
+          <!-- Hier beginnt der Diagrammkasten mit Titel, Knöpfen und Tabelle. -->
+          <figure class="card">
+            <figcaption>
+              <p class="chart-title">
+                Die fünf häufigsten Krebsarten
+              </p>
+
+              <p class="chart-sub">
+                Alter 20–29 · 2018–2022 · Anzahl Fälle · absteigend sortiert
+              </p>
+
+            </figcaption>
+
+            <!-- Mit diesen Knöpfen wählen wir beide Geschlechter, Frauen oder Männer. -->
+            <div class="filter-group" data-filter-group="krebsartendiagramm" role="group" aria-label="Geschlecht für Die fünf häufigsten Krebsarten">
+              <button type="button" class="filter-btn" data-value="total" aria-pressed="false">Beide Geschlechter</button>
+              <button type="button" class="filter-btn active" data-value="female" aria-pressed="true">Frauen</button>
+              <button type="button" class="filter-btn" data-value="male" aria-pressed="false">Männer</button>
+            </div>
+            <!-- canvas ist die Zeichenfläche. Hier zeichnet Chart.js das Diagramm. -->
+            <div class="chart-container">
+              <canvas id="krebsartendiagramm" role="img" aria-label="Die fünf häufigsten Krebsarten">Die Werte stehen in der Tabelle unter dem Diagramm.</canvas>
+            </div>
+            <p id="krebsartendiagramm-status" class="data-status" role="status">
+              Daten werden geladen …
+            </p>
+
+            <!-- Diese Tabelle kann man aufklappen. script.js trägt die Zahlen ein. -->
+            <details class="data-table">
+              <summary>Werte als Tabelle anzeigen</summary>
+              <div id="krebsartendiagramm-tabelle" class="table-wrap">
+              </div>
+            </details>
+            <p class="chart-note">
+              Erfundene Platzhalterwerte; keine Grundlage für die Aussagen der Geschichte.
+            </p>
+
+          </figure>
+          <p>
+            Auch Lisas Diagnose gehört dazu. Sie erkrankte an
+            einem Hodgkin-Lymphom, einer Krebsart, von der sie vor
+            ihrer Erkrankung noch nie gehört hatte. Ein Blick auf
+            die Daten zeigt jedoch, dass diese Diagnose bei den
+            20- bis 29-Jährigen zu den häufigsten Krebsarten
+            gehört.
+          </p>
+
+          <p>
+            Gleichzeitig spielt diese Krebsart über alle
+            Altersgruppen betrachtet eine deutlich kleinere Rolle
+            als viele der Krebsarten, die typischerweise im
+            höheren Alter auftreten.
+          </p>
+
+          <p>
+            Die Daten zeigen damit, dass sich Krebs nicht nur in
+            seiner Häufigkeit, sondern auch in seiner Art mit dem
+            Alter verändert. Krebs bei jungen Erwachsenen sieht
+            häufig anders aus als Krebs bei älteren Menschen.
+          </p>
+
+          <p>
+            Erst dadurch wird für Lisa greifbar, warum ihr ihre
+            Diagnose zunächst so selten vorkam. Nicht weil sie
+            aussergewöhnlich war, sondern weil sie zu einer
+            Altersgruppe gehört, über die deutlich seltener
+            gesprochen wird.
+          </p>
+
+        </div>
+      </section>
+
+      <!-- Kapitel 5: Hinter jeder Zahl -->
+      <section class="story-section" id="kapitel-5">
+        <div class="story-body">
+          <h2 class="section-title">Hinter jeder Zahl</h2>
+          <p>
+            Als Lisa ihre Diagnose erhielt, fühlte sie sich
+            allein. Doch die Daten zeigen, dass junge Erwachsene
+            zwar nur einen kleinen Teil aller Krebsdiagnosen
+            ausmachen, trotzdem erhalten jedes Jahr Menschen in
+            ihrem Alter ähnliche Diagnosen wie sie. Ihre
+            Erkrankungen unterscheiden sich einfach von denen
+            älterer Generationen.
+          </p>
+
+          <p>
+            Ein Blick in die Zukunft ist für jede Altersgruppe
+            allerdings hoffnungsvoll, denn die Chancen, die
+            Krankheit zu überleben, haben sich in den vergangenen
+            20 Jahren deutlich verbessert.
+          </p>
+
+          <p>
+            Und vielleicht ist genau die wichtigste Erkenntnis
+            dieser Geschichte, dass Krebs bei jungen Menschen
+            selten ist, fast unsichtbar und trotzdem jedes Jahr
+            Teil vieler Lebensgeschichten. Wenn wir über Krebs
+            sprechen, denken wir meist an ältere Menschen. Aber
+            auch für junge Menschen kann es zur Realität werden,
+            die wir nicht vergessen sollten.
+          </p>
+
+          <p>
+            Denn hinter jeder Zahl steht jemand, der eigentlich
+            gerade mit Studium, Arbeit, Freundschaften,
+            Zukunftsplänen oder der nächsten Reise beschäftigt
+            sein wollte.
+          </p>
+
+          <p class="quote">
+            Jemand wie Lisa.
+          </p>
+
+        </div>
+      </section>
+
+      <!-- Ganz unten steht, woher unsere Daten kommen sollen. -->
+      <footer class="footer-copy">
+        Geplante Datenquelle: Bundesamt für Statistik, stats.swiss ·
+        DF_STATKREBS_NUM_RATES. Aktuell werden ausschliesslich erfundene
+        Platzhalterwerte angezeigt.
+      </footer>
+    </main>
+  </body>
+</html>
