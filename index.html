@@ -8,13 +8,24 @@
     <title>Krebs kennt kein Alter · Zu jung dafür?</title>
 
     <!-- Verbindung zu CSS Datei die das Design bestimmt -->
-    <link rel="stylesheet" href="style.css?v=20261008-intro-kurz">
+    <link rel="stylesheet" href="style.css?v=20261010-altersfilter">
 
     <!-- Chart.js zeichnet Diagramme. Unser script.js sagt ihm, welche Zahlen/Daten es zeigen soll. -->
     <script src="vendor/chart.umd.min.js" defer></script>
-    <script src="script.js?v=20261008-intro-kurz" defer></script>
+    <script src="script.js?v=20261010-mortalitaet-krebsarten" defer></script>
   </head>
   <body>
+    <nav class="grafik-navigation" aria-label="Zu den Grafiken springen">
+      <a href="#grafik-alter" aria-label="Zur Grafik: Neuerkrankungen nach Altersklasse">
+        <span class="grafik-navigation-label" aria-hidden="true">Neuerkrankungen nach Altersklasse</span>
+      </a>
+      <a href="#grafik-verlauf" aria-label="Zur Grafik: Inzidenz und Mortalität im Zeitverlauf">
+        <span class="grafik-navigation-label" aria-hidden="true">Inzidenz und Mortalität im Zeitverlauf</span>
+      </a>
+      <a href="#grafik-krebsarten" aria-label="Zur Grafik: Die fünf häufigsten Krebsarten">
+        <span class="grafik-navigation-label" aria-hidden="true">Die fünf häufigsten Krebsarten</span>
+      </a>
+    </nav>
     <main>
       <section class="dna-scrolly" id="dna-intro" aria-labelledby="dna-titel">
         <div class="dna-stage">
@@ -148,7 +159,7 @@
           <h2 class="section-title">Krebs und Alter</h2>
 
           <!-- Hier beginnt der Diagrammkasten mit Titel, Knöpfen und Tabelle. -->
-          <figure class="card">
+          <figure class="card" id="grafik-alter" tabindex="-1">
             <figcaption>
               <p class="chart-title">
                 Neuerkrankungen nach Altersklasse
@@ -161,10 +172,15 @@
             </figcaption>
 
             <!-- Mit diesen Knöpfen wählen wir beide Geschlechter, Frauen oder Männer. -->
-            <div class="filter-group" data-filter-group="altersdiagramm" role="group" aria-label="Geschlecht für Neuerkrankungen nach Altersklasse">
-              <button type="button" class="filter-btn active" data-value="total" aria-pressed="true">Beide Geschlechter</button>
-              <button type="button" class="filter-btn" data-value="female" aria-pressed="false">Frauen</button>
-              <button type="button" class="filter-btn" data-value="male" aria-pressed="false">Männer</button>
+            <div class="chart-filters">
+              <div class="filter-group" data-filter-group="altersdiagramm" role="group" aria-label="Geschlecht für Neuerkrankungen nach Altersklasse">
+                <button type="button" class="filter-btn active" data-value="total" aria-pressed="true">Beide Geschlechter</button>
+                <button type="button" class="filter-btn" data-value="female" aria-pressed="false">Frauen</button>
+                <button type="button" class="filter-btn" data-value="male" aria-pressed="false">Männer</button>
+              </div>
+              <div class="filter-group" role="group" aria-label="Altersklassen auswählen">
+                <button type="button" class="filter-btn active" id="alter-50-plus" aria-pressed="true" aria-controls="altersdiagramm altersdiagramm-tabelle">50+</button>
+              </div>
             </div>
             <!-- canvas Zeichenfläche. Hier zeichnet Chart.js das Diagramm. -->
             <div class="chart-container">
@@ -181,7 +197,7 @@
               </div>
             </details>
             <p class="chart-note">
-              Werte über 6000 werden bei «+6000» gekürzt dargestellt. Die genauen Zahlen stehen im Tooltip und in der Tabelle.
+              Bei «Beide Geschlechter» sind Frauen dunkelrosa und Männer hellrosa gestapelt; die gesamte Balkenhöhe zeigt die Summe. Im Tooltip stehen die Fälle und Prozentanteile. Mit «50+» werden alle Altersklassen und ihre vollständigen Werte angezeigt. Ohne «50+» werden nur Altersklassen unter 50 Jahren gezeigt; die Skala reicht dann bis 4000.
             </p>
 
           </figure>
@@ -241,7 +257,7 @@
           </p>
 
           <!-- Hier beginnt der Diagrammkasten mit Titel, Knöpfen und Tabelle. -->
-          <figure class="card">
+          <figure class="card" id="grafik-verlauf" tabindex="-1">
             <figcaption>
               <p class="chart-title">
                 Inzidenz und Mortalität im Zeitverlauf
@@ -263,6 +279,9 @@
             </div>
             <p id="zeitdiagramm-status" class="data-status" role="status">
               Daten werden geladen …
+            </p>
+            <p class="chart-note">
+              Die gepunkteten Linien zeigen das Verhältnis Mortalität ÷ Inzidenz × 100 für Frauen und Männer. Die Prozentwerte stehen auf der rechten Achse; die Raten pro 100’000 stehen auf der linken Achse.
             </p>
 
             <!-- Diese Tabelle kann man aufklappen. script.js trägt die Zahlen ein. -->
@@ -317,14 +336,14 @@
           </p>
 
           <!-- Hier beginnt der Diagrammkasten mit Titel, Knöpfen und Tabelle. -->
-          <figure class="card">
+          <figure class="card" id="grafik-krebsarten" tabindex="-1">
             <figcaption>
               <p class="chart-title">
                 Die fünf häufigsten Krebsarten
               </p>
 
               <p class="chart-sub">
-                Alter 20–29 · 2018–2022 · Anzahl Fälle · absteigend sortiert
+                Alter 20–29 · 2018–2022 · jährlicher Mittelwert · nach Neuerkrankungen sortiert
               </p>
 
             </figcaption>
@@ -337,10 +356,13 @@
             </div>
             <!-- canvas ist die Zeichenfläche. Hier zeichnet Chart.js das Diagramm. -->
             <div class="chart-container">
-              <canvas id="krebsartendiagramm" role="img" aria-label="Die fünf häufigsten Krebsarten">Die Werte stehen in der Tabelle unter dem Diagramm.</canvas>
+              <canvas id="krebsartendiagramm" role="img" aria-label="Neuerkrankungen und Todesfälle der fünf häufigsten Krebsarten">Die Werte stehen in der Tabelle unter dem Diagramm.</canvas>
             </div>
             <p id="krebsartendiagramm-status" class="data-status" role="status">
               Daten werden geladen …
+            </p>
+            <p class="chart-note">
+              Rot: Neuerkrankungen. Blau: Todesfälle (Mortalität). Die jährlichen Mittelwerte beziehen sich auf denselben Zeitraum und sind keine Überlebensrate.
             </p>
 
             <!-- Diese Tabelle kann man aufklappen. script.js trägt die Zahlen ein. -->

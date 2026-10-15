@@ -6,9 +6,10 @@ const DATEN_URL = '/unload.php';
 // Diese Zeitspanne und Altersgruppe verwenden wir für unsere Auswertung
 const AKTUELLER_ZEITRAUM = '2018-2022';
 const ZIELALTER = '20-29';
-const MAX_NEUERKRANKUNGEN = 6000;
+const MAX_NEUERKRANKUNGEN_UNTER_50 = 4000;
 const GESCHLECHTER = { total: 'Beide Geschlechter', female: 'Frauen', male: 'Männer', comparison: 'Frauen & Männer' };
 const ROTBRAUN = '#954139';
+const ROSA = '#e9a59c';
 const BLAU = '#8e9aee';
 
 
@@ -18,6 +19,7 @@ let daten = [];
 
 // Die ersten zwei Diagramme starten mit beiden Geschlechtern, das dritte mit Frauen
 const auswahl = { altersdiagramm: 'total', zeitdiagramm: 'comparison', krebsartendiagramm: 'female' };
+let alter50Plus = true;
 
 // Hier merken wir uns die Diagramme. So müssen wir sie nicht bei jedem Klick neu erstellen
 const diagramme = {};
@@ -94,6 +96,9 @@ function gesamtwerteErgaenzen(zeilen) {
             cases: vorhandeneZeilen.every(zeile => Number.isFinite(zeile.cases))
                 ? Math.round(vorhandeneZeilen.reduce((summe, zeile) => summe + zeile.cases, 0) * 10000) / 10000
                 : null,
+            mortality_cases: vorhandeneZeilen.every(zeile => Number.isFinite(zeile.mortality_cases))
+                ? Math.round(vorhandeneZeilen.reduce((summe, zeile) => summe + zeile.mortality_cases, 0) * 10000) / 10000
+                : null,
             incidence_rate: gemeinsameRate('incidence_rate'),
             mortality_rate: gemeinsameRate('mortality_rate')
         });
@@ -117,11 +122,35 @@ function datenAnpassen(zeilen) {
             sex: GESCHLECHT_ZUORDNUNG.get(geschlecht) ?? geschlecht,
             cancer_type: GESAMT_KREBSARTEN.includes(krebsart) ? 'Alle Krebsarten' : krebsart,
             cases: zeile.incidence_cases !== undefined ? zeile.incidence_cases : zeile.cases,
+            mortality_cases: Number.isFinite(zeile.mortality_cases) ? zeile.mortality_cases : null,
             incidence_rate: zeile.incidence_rate,
             mortality_rate: zeile.mortality_rate
         };
     });
     return gesamtwerteErgaenzen(angepassteZeilen);
+}
+
+function altersSkalaMaximum(diagrammdaten) {
+    if (!alter50Plus) {
+        return MAX_NEUERKRANKUNGEN_UNTER_50;
+    }
+    const summen = diagrammdaten.labels.map((altersklasse, index) =>
+        diagrammdaten.datasets.reduce((summe, datensatz) => summe + (datensatz.data[index]?.cases ?? 0), 0));
+    const hoechsterWert = Math.max(6000, ...summen);
+    return Math.ceil(hoechsterWert * 1.05 / 1000) * 1000;
+}
+
+function ratenVerhaeltnis(zeile) {
+    if (!Number.isFinite(zeile?.incidence_rate) || zeile.incidence_rate <= 0 ||
+        !Number.isFinite(zeile.mortality_rate) || zeile.mortality_rate < 0) {
+        return null;
+    }
+    const verhaeltnis = zeile.mortality_rate / zeile.incidence_rate * 100;
+    return Number.isFinite(verhaeltnis) ? verhaeltnis : null;
+}
+
+function prozentBeschriften(wert) {
+    return wert === null ? null : wert.toLocaleString('de-CH', { maximumFractionDigits: 1 }) + ' %';
 }
 
 function krebsartBeschriften(achse, wert) {
@@ -148,88 +177,139 @@ function krebsartBeschriften(achse, wert) {
     return zeilen;
 }
 
-// Wir erstellen die drei Diagramme zuerst ohne Daten. Die Zahlen kommen später dazu
 // type bestimmt die Diagrammart. In data stehen die Daten und in options die Einstellungen
-function diagrammeErstellen() {
+function diagrammErstellen(kennung, diagrammdaten) {
     const Chart = window['Chart'];
     if (typeof Chart !== 'function') {
         throw new Error('Chart.js konnte nicht geladen werden. Seite neu laden.');
     }
+    let konfiguration;
     // Das erste Diagramm zeigt Balken für die Altersgruppen
-    diagramme.altersdiagramm = new Chart(document.querySelector('#altersdiagramm'), {
-        type: 'bar',
-        data: { labels: [], datasets: [] },
-        options: {
-            responsive: true, // Die Breite passt sich dem Bildschirm an
-            maintainAspectRatio: false,
-            plugins: {
-                legend: { display: false },
-                tooltip: {
-                    callbacks: {
-                        label: kontext => kontext.dataset.label + ': ' + kontext.raw.cases
+    if (kennung === 'altersdiagramm') {
+        konfiguration = {
+            type: 'bar',
+            data: diagrammdaten,
+            options: {
+                responsive: true, // Die Breite passt sich dem Bildschirm an
+                maintainAspectRatio: false,
+                interaction: { mode: 'index', intersect: false },
+                plugins: {
+                    legend: { display: auswahl.altersdiagramm === 'total' },
+                    tooltip: {
+                        callbacks: {
+                            label: kontext => {
+                                const anteil = kontext.chart.data.datasets.length === 2 && kontext.raw.gesamt > 0
+                                    ? ' (' + prozentBeschriften(kontext.raw.cases / kontext.raw.gesamt * 100) + ')'
+                                    : '';
+                                return kontext.dataset.label + ': ' + kontext.raw.cases + anteil;
+                            },
+                            footer: eintraege => {
+                                const eintrag = eintraege[0];
+                                return eintrag?.chart.data.datasets.length === 2 && Number.isFinite(eintrag.raw.gesamt)
+                                    ? 'Gesamt: ' + eintrag.raw.gesamt
+                                    : '';
+                            }
+                        }
+                    }
+                },
+                scales: {
+                    x: { stacked: true, title: { display: true, text: 'Altersklasse (Jahre)' } },
+                    y: {
+                        stacked: true,
+                        beginAtZero: true,
+                        max: altersSkalaMaximum(diagrammdaten),
+                        ticks: { stepSize: 1000 },
+                        title: { display: true, text: 'Anzahl Neuerkrankungen' }
                     }
                 }
-            },
-            scales: {
-                x: { title: { display: true, text: 'Altersklasse (Jahre)' } },
-                y: {
-                    beginAtZero: true,
-                    max: MAX_NEUERKRANKUNGEN,
-                    ticks: {
-                        stepSize: 1000,
-                        callback: wert => wert === MAX_NEUERKRANKUNGEN ? '+6000' : wert
-                    },
-                    title: { display: true, text: 'Anzahl Neuerkrankungen' }
-                }
             }
-        }
-    });
+        };
+    }
     // Das zweite Diagramm zeigt die Entwicklung über die Jahre als Linien
-    diagramme.zeitdiagramm = new Chart(document.querySelector('#zeitdiagramm'), {
-        type: 'line',
-        data: { labels: [], datasets: [] },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            interaction: { mode: 'index', intersect: false },
-            scales: {
-                x: { title: { display: true, text: 'Fünfjahreszeitraum' } },
-                // Alle Linien zeigen Werte pro 100'000 Personen. Darum reicht eine gemeinsame Skala
-                y: { beginAtZero: true, title: { display: true, text: 'Pro 100’000 Einwohner:innen' } }
-            }
-        }
-    });
-    // Das dritte Diagramm zeigt die fünf häufigsten Krebsarten mit waagrechten Balken
-    diagramme.krebsartendiagramm = new Chart(document.querySelector('#krebsartendiagramm'), {
-        type: 'bar',
-        data: { labels: [], datasets: [] },
-        options: {
-            indexAxis: 'y', // So stehen die Namen links und die Balken gehen nach rechts
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: { legend: { display: false } },
-            scales: {
-                x: {
-                    beginAtZero: true,
-                    max: 120,
-                    ticks: { stepSize: 20 },
-                    title: { display: true, text: 'Anzahl Fälle' }
+    if (kennung === 'zeitdiagramm') {
+        konfiguration = {
+            type: 'line',
+            data: diagrammdaten,
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                interaction: { mode: 'index', intersect: false },
+                plugins: {
+                    tooltip: {
+                        callbacks: {
+                            label: kontext => kontext.dataset.label + ': ' +
+                                (kontext.dataset.yAxisID === 'verhaeltnis'
+                                    ? prozentBeschriften(kontext.parsed.y)
+                                    : kontext.formattedValue + ' pro 100’000')
+                        }
+                    }
                 },
-                y: {
-                    afterFit: achse => {
-                        achse.width = Math.min(220, Math.max(150, achse.chart.width / 2));
-                        achse.paddingTop = 0;
-                        achse.paddingBottom = 0;
-                    },
-                    ticks: {
-                        autoSkip: false,
-                        callback: function(wert) { return krebsartBeschriften(this, wert); }
-                    },
-                    title: { display: true, text: 'Krebsart' }
+                scales: {
+                    x: { title: { display: true, text: 'Fünfjahreszeitraum' } },
+                    y: { beginAtZero: true, title: { display: true, text: 'Pro 100’000 Einwohner:innen' } },
+                    verhaeltnis: {
+                        axis: 'y',
+                        type: 'linear',
+                        position: 'right',
+                        beginAtZero: true,
+                        suggestedMax: 20,
+                        grid: { drawOnChartArea: false },
+                        ticks: { callback: prozentBeschriften },
+                        title: { display: true, text: 'Mortalität / Inzidenz (%)' }
+                    }
                 }
             }
-        }
-    });
+        };
+    }
+    // Das dritte Diagramm zeigt die fünf häufigsten Krebsarten mit waagrechten Balken
+    if (kennung === 'krebsartendiagramm') {
+        konfiguration = {
+            type: 'bar',
+            data: diagrammdaten,
+            options: {
+                indexAxis: 'y', // So stehen die Namen links und die Balken gehen nach rechts
+                responsive: true,
+                maintainAspectRatio: false,
+                interaction: { mode: 'index', axis: 'y', intersect: false },
+                plugins: {
+                    legend: { display: true },
+                    tooltip: {
+                        callbacks: {
+                            label: kontext => kontext.dataset.label + ': ' + kontext.formattedValue + ' pro Jahr'
+                        }
+                    }
+                },
+                scales: {
+                    x: {
+                        beginAtZero: true,
+                        suggestedMax: 120,
+                        ticks: { stepSize: 20 },
+                        title: { display: true, text: 'Anzahl pro Jahr' }
+                    },
+                    y: {
+                        afterFit: achse => {
+                            achse.width = Math.min(220, Math.max(150, achse.chart.width / 2));
+                            achse.paddingTop = 0;
+                            achse.paddingBottom = 0;
+                        },
+                        ticks: {
+                            autoSkip: false,
+                            callback: function(wert) { return krebsartBeschriften(this, wert); }
+                        },
+                        title: { display: true, text: 'Krebsart' }
+                    }
+                }
+            }
+        };
+    }
+    konfiguration.options.animation = false;
+    konfiguration.plugins = [{
+        id: 'diagrammwerteSichtbarkeit',
+        beforeDatasetsDraw: diagramm => diagramm.$werteSichtbar === true,
+        beforeTooltipDraw: diagramm => diagramm.$werteSichtbar === true
+    }];
+    diagramme[kennung] = new Chart(document.getElementById(kennung), konfiguration);
+    diagramme[kennung].$werteSichtbar = false;
 }
 
 // Unter jedem Diagramm zeigen wir die gleichen Zahlen nochmals als Tabelle
@@ -267,33 +347,60 @@ function tabelleAnzeigen(kennung, spalten, zeilen) {
 
 // Hier zeigen wir die Daten für das ausgewählte Geschlecht
 // filter behält passende Zeilen. Mit map holen wir die Namen oder Zahlen daraus
-function render(kennung) {
+function render(kennung, erstellen = false) {
     const geschlecht = auswahl[kennung];
     const diagramm = diagramme[kennung];
+    const diagrammdaten = { labels: [], datasets: [] };
     let zeilen = [];
     let spalten = [];
     let tabellenwerte = [];
 
     // Für das erste Diagramm nehmen wir die Neuerkrankungen pro Altersgruppe
     if (kennung === 'altersdiagramm') {
+        const geschlechter = geschlecht === 'total' ? ['female', 'male'] : [geschlecht];
         zeilen = daten.filter(zeile =>
-            zeile.sex === geschlecht && zeile.period === AKTUELLER_ZEITRAUM &&
-            zeile.cancer_type === 'Alle Krebsarten' && zeile.cases !== null
+            geschlechter.includes(zeile.sex) && zeile.period === AKTUELLER_ZEITRAUM &&
+            zeile.cancer_type === 'Alle Krebsarten' && zeile.cases !== null &&
+            (alter50Plus || parseInt(zeile.age_group, 10) < 50)
         );
         // Wir sortieren von jung nach alt. parseInt liest dafür die erste Zahl, z. B. 20 aus 20-29
         zeilen.sort((a, b) => parseInt(a.age_group) - parseInt(b.age_group));
-        diagramm.data.labels = zeilen.map(zeile => zeile.age_group);
-        diagramm.data.datasets = [{
-            label: GESCHLECHTER[geschlecht],
-            data: zeilen.map(zeile => ({
-                x: zeile.age_group,
-                y: Math.min(zeile.cases, MAX_NEUERKRANKUNGEN),
-                cases: zeile.cases
+        diagrammdaten.labels = [...new Set(zeilen.map(zeile => zeile.age_group))];
+        const werte = new Map(diagrammdaten.labels.map(altersklasse => [altersklasse, {}]));
+        zeilen.forEach(zeile => {
+            werte.get(zeile.age_group)[zeile.sex] = zeile.cases;
+        });
+        const alterswerte = diagrammdaten.labels.map(altersklasse => {
+            const frauen = werte.get(altersklasse).female ?? null;
+            const maenner = werte.get(altersklasse).male ?? null;
+            return {
+                altersklasse,
+                female: frauen,
+                male: maenner,
+                gesamt: Number.isFinite(frauen) && Number.isFinite(maenner)
+                    ? Math.round((frauen + maenner) * 10000) / 10000
+                    : null
+            };
+        });
+        diagrammdaten.datasets = geschlechter.map(ausgewaehltesGeschlecht => ({
+            label: GESCHLECHTER[ausgewaehltesGeschlecht],
+            stack: 'geschlechter',
+            data: alterswerte.map(alterswert => ({
+                x: alterswert.altersklasse,
+                y: alterswert[ausgewaehltesGeschlecht],
+                cases: alterswert[ausgewaehltesGeschlecht],
+                gesamt: alterswert.gesamt
             })),
-            backgroundColor: zeilen.map(zeile => zeile.age_group === ZIELALTER ? ROTBRAUN : '#595959')
-        }];
-        spalten = ['Altersklasse', 'Neuerkrankungen'];
-        tabellenwerte = zeilen.map(zeile => [zeile.age_group, zeile.cases]);
+            backgroundColor: geschlecht === 'total'
+                ? (ausgewaehltesGeschlecht === 'female' ? ROTBRAUN : ROSA)
+                : alterswerte.map(alterswert => alterswert.altersklasse === ZIELALTER ? ROTBRAUN : '#595959')
+        }));
+        spalten = geschlecht === 'total'
+            ? ['Altersklasse', 'Frauen', 'Männer', 'Gesamt']
+            : ['Altersklasse', 'Neuerkrankungen'];
+        tabellenwerte = alterswerte.map(alterswert => geschlecht === 'total'
+            ? [alterswert.altersklasse, alterswert.female, alterswert.male, alterswert.gesamt]
+            : [alterswert.altersklasse, alterswert[geschlecht]]);
     }
 
     // Für den Verlauf nehmen wir die Werte der 20- bis 29-Jährigen aus allen Zeiträumen
@@ -306,8 +413,8 @@ function render(kennung) {
         );
         zeilen.sort((a, b) => parseInt(a.period) - parseInt(b.period));
         const zeitraeume = [...new Set(zeilen.map(zeile => zeile.period))];
-        diagramm.data.labels = zeitraeume;
-        diagramm.data.datasets = geschlechter.flatMap(ausgewaehltesGeschlecht => {
+        diagrammdaten.labels = zeitraeume;
+        diagrammdaten.datasets = geschlechter.flatMap(ausgewaehltesGeschlecht => {
             const werte = new Map(zeilen.filter(zeile => zeile.sex === ausgewaehltesGeschlecht)
                 .map(zeile => [zeile.period, zeile]));
             const bezeichnung = GESCHLECHTER[ausgewaehltesGeschlecht] + ' · ';
@@ -322,17 +429,28 @@ function render(kennung) {
                     label: bezeichnung + 'Mortalität',
                     data: zeitraeume.map(zeitraum => werte.get(zeitraum)?.mortality_rate ?? null),
                     borderColor: farbe, backgroundColor: farbe, borderDash: [7, 5]
+                },
+                {
+                    label: bezeichnung + 'Verhältnis (%)',
+                    data: zeitraeume.map(zeitraum => ratenVerhaeltnis(werte.get(zeitraum))),
+                    yAxisID: 'verhaeltnis',
+                    borderColor: farbe,
+                    backgroundColor: farbe,
+                    borderDash: [2, 4],
+                    pointStyle: 'triangle'
                 }
             ];
         });
         // Fehlende Zahlen bleiben in der Linie eine Lücke. Wir setzen dafür keine 0 ein
         spalten = ['Zeitraum', ...geschlechter.flatMap(ausgewaehltesGeschlecht => {
             const bezeichnung = GESCHLECHTER[ausgewaehltesGeschlecht] + ' · ';
-            return [bezeichnung + 'Inzidenz pro 100’000', bezeichnung + 'Mortalität pro 100’000'];
+            return [bezeichnung + 'Inzidenz pro 100’000', bezeichnung + 'Mortalität pro 100’000',
+                bezeichnung + 'Mortalität / Inzidenz (%)'];
         })];
         tabellenwerte = zeitraeume.map(zeitraum => [zeitraum, ...geschlechter.flatMap(ausgewaehltesGeschlecht => {
             const zeile = zeilen.find(zeile => zeile.sex === ausgewaehltesGeschlecht && zeile.period === zeitraum);
-            return [zeile?.incidence_rate ?? null, zeile?.mortality_rate ?? null];
+            return [zeile?.incidence_rate ?? null, zeile?.mortality_rate ?? null,
+                prozentBeschriften(ratenVerhaeltnis(zeile))];
         })]);
     }
 
@@ -345,20 +463,27 @@ function render(kennung) {
         );
         zeilen.sort((a, b) => b.cases - a.cases); // Die meisten Fälle kommen zuerst
         zeilen = zeilen.slice(0, 5); // Aus der sortierten Liste nehmen wir nur die ersten fünf
-        diagramm.data.labels = zeilen.map(zeile => zeile.cancer_type);
-        diagramm.data.datasets = [{
-            label: GESCHLECHTER[geschlecht],
-            data: zeilen.map(zeile => zeile.cases),
-            backgroundColor: ROTBRAUN
-        }];
-        spalten = ['Krebsart', 'Anzahl Fälle'];
-        tabellenwerte = zeilen.map(zeile => [zeile.cancer_type, zeile.cases]);
+        diagrammdaten.labels = zeilen.map(zeile => zeile.cancer_type);
+        diagrammdaten.datasets = [
+            {
+                label: 'Neuerkrankungen',
+                data: zeilen.map(zeile => zeile.cases),
+                backgroundColor: ROTBRAUN
+            },
+            {
+                label: 'Todesfälle (Mortalität)',
+                data: zeilen.map(zeile => zeile.mortality_cases),
+                backgroundColor: BLAU
+            }
+        ];
+        spalten = ['Krebsart', 'Neuerkrankungen pro Jahr', 'Todesfälle pro Jahr'];
+        tabellenwerte = zeilen.map(zeile => [zeile.cancer_type, zeile.cases, zeile.mortality_cases]);
     }
 
     // Wenn passende Daten fehlen, blenden wir die Zeichenfläche des Diagramms aus
     const canvas = document.getElementById(kennung);
     canvas.parentElement.hidden = zeilen.length === 0;
-    const titel = { altersdiagramm: 'Neuerkrankungen nach Altersklasse', zeitdiagramm: 'Inzidenz und Mortalität im Zeitverlauf', krebsartendiagramm: 'Die fünf häufigsten Krebsarten' };
+    const titel = { altersdiagramm: 'Neuerkrankungen nach Altersklasse', zeitdiagramm: 'Inzidenz und Mortalität im Zeitverlauf', krebsartendiagramm: 'Neuerkrankungen und Todesfälle der fünf häufigsten Krebsarten' };
     // Diese Beschreibung können Vorleseprogramme vorlesen
     canvas.setAttribute('aria-label', titel[kennung] + ' · ' + GESCHLECHTER[geschlecht]);
     // Wenn Daten fehlen, erscheint unter dem Diagramm ein Hinweis
@@ -368,10 +493,93 @@ function render(kennung) {
         status.textContent += ' Die Musterdatei enthält nur eine Beispielreihe für Frauen.';
     }
     tabelleAnzeigen(kennung, spalten, tabellenwerte);
-    diagramm.update(); // Das vorhandene Diagramm zeigt jetzt die neuen Zahlen
+    if (diagramm) {
+        diagramm.data = diagrammdaten;
+        if (kennung === 'altersdiagramm') {
+            diagramm.options.scales.y.max = altersSkalaMaximum(diagrammdaten);
+            diagramm.options.plugins.legend.display = geschlecht === 'total';
+        }
+        diagramm.update(); // Das vorhandene Diagramm zeigt jetzt die neuen Zahlen
+    } else if (erstellen && zeilen.length > 0) {
+        diagrammErstellen(kennung, diagrammdaten);
+    }
+}
+
+function diagrammAnimationEinrichten() {
+    const startverzoegerungen = new Map();
+
+    const beobachter = new IntersectionObserver((eintraege) => {
+        eintraege.forEach(eintrag => {
+            const canvas = eintrag.target.querySelector('canvas');
+            if (!canvas) {
+                return;
+            }
+            const kennung = canvas.id;
+            const diagramm = diagramme[kennung];
+            window.clearTimeout(startverzoegerungen.get(kennung));
+            startverzoegerungen.delete(kennung);
+
+            if (!diagramm) {
+                return;
+            }
+
+            if (!eintrag.isIntersecting) {
+                diagramm.stop();
+                diagramm.$werteSichtbar = false;
+                diagramm.options.animation = false;
+                diagramm.update('none');
+                return;
+            }
+
+            if (eintrag.intersectionRatio < 1 || diagramm.$werteSichtbar) {
+                return;
+            }
+
+            const zeitgeber = window.setTimeout(() => {
+                startverzoegerungen.delete(kennung);
+                const position = eintrag.target.getBoundingClientRect();
+                if (position.top < 0 || position.bottom > window.innerHeight) {
+                    return;
+                }
+
+                diagramm.stop();
+                diagramm.options.animation = window.matchMedia('(prefers-reduced-motion: reduce)').matches
+                    ? false
+                    : { duration: 2400, easing: 'easeOutQuart' };
+                diagramm.$werteSichtbar = true;
+                diagramm.reset();
+                diagramm.update();
+            }, 300);
+            startverzoegerungen.set(kennung, zeitgeber);
+        });
+    }, {
+        rootMargin: '0px',
+        threshold: [0, 1]
+    });
+
+    ['altersdiagramm', 'zeitdiagramm', 'krebsartendiagramm']
+        .forEach(kennung => {
+            const canvas = document.getElementById(kennung);
+            if (canvas) {
+                beobachter.observe(canvas.parentElement);
+            }
+        });
 }
 
 // Hier legen wir fest, was beim Klick auf einen Geschlechter-Knopf passiert
+function altersfilterEinrichten() {
+    const knopf = document.getElementById('alter-50-plus');
+    if (!knopf) {
+        return;
+    }
+    knopf.addEventListener('click', () => {
+        alter50Plus = !alter50Plus;
+        knopf.classList.toggle('active', alter50Plus);
+        knopf.setAttribute('aria-pressed', String(alter50Plus));
+        render('altersdiagramm');
+    });
+}
+
 function filterEinrichten(kennung) {
     const gruppe = document.querySelector('[data-filter-group="' + kennung + '"]');
     gruppe.querySelectorAll('button').forEach(knopf => {
@@ -415,11 +623,17 @@ async function datenLaden() {
 async function starten() {
     try {
         daten = await datenLaden();
-        diagrammeErstellen();
+        if (typeof window['Chart'] !== 'function') {
+            throw new Error('Chart.js konnte nicht geladen werden. Seite neu laden.');
+        }
         ['altersdiagramm', 'zeitdiagramm', 'krebsartendiagramm'].forEach(kennung => {
-            render(kennung);
+            render(kennung, true);
             filterEinrichten(kennung);
         });
+
+        altersfilterEinrichten();
+        diagrammAnimationEinrichten();
+
     } catch (fehler) {
         // Wenn etwas schiefgeht, zeigen wir eine Fehlermeldung statt leerer Diagramme
         document.querySelectorAll('.chart-container').forEach(element => { element.hidden = true; });
@@ -429,6 +643,40 @@ async function starten() {
         console.error(fehler); // Den Fehler sehen wir auch in der Browser-Konsole
     }
 }
+function grafikNavigationEinrichten() {
+    const links = [...document.querySelectorAll('.grafik-navigation a')];
+    const grafiken = links.map(link => document.getElementById(link.hash.slice(1)));
+    let bildAngefordert = false;
+
+    function navigationAktualisieren() {
+        bildAngefordert = false;
+        let aktuelleGrafik = null;
+        grafiken.forEach((grafik, index) => {
+            if (grafik && grafik.getBoundingClientRect().top <= window.innerHeight * 0.4) {
+                aktuelleGrafik = links[index];
+            }
+        });
+        links.forEach(link => {
+            if (link === aktuelleGrafik) {
+                link.setAttribute('aria-current', 'location');
+            } else {
+                link.removeAttribute('aria-current');
+            }
+        });
+    }
+
+    function navigationAnfordern() {
+        if (!bildAngefordert) {
+            bildAngefordert = true;
+            window.requestAnimationFrame(navigationAktualisieren);
+        }
+    }
+
+    window.addEventListener('scroll', navigationAnfordern, { passive: true });
+    window.addEventListener('resize', navigationAnfordern);
+    navigationAktualisieren();
+}
+
 function introBereich(fortschritt, start, ende) {
     return Math.max(0, Math.min(1, (fortschritt - start) / (ende - start)));
 }
@@ -511,4 +759,5 @@ function introEinrichten() {
 
 // Sobald diese Datei geladen ist, starten wir alles
 introEinrichten();
+grafikNavigationEinrichten();
 void starten();
