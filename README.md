@@ -5,6 +5,9 @@ Kurzbeschreibung
 Frontend-Aufbau
 Vor Lisas Geschichte steht ein DNA-Video mit einer scrollgesteuerten Altersanzeige von 100 bis 20 Jahren. Der Einstieg verwendet HTML, CSS und JavaScript ohne zusätzliches Animations-Framework. Über «Zur Geschichte» lässt er sich überspringen; bei reduzierter Bewegung bleibt er statisch.
 Die Datei dna.mp4 liegt neben index.html, style.css und script.js und muss beim Hochladen mitgenommen werden. Die drei Diagramme laden weiterhin die Daten aus unload.php; Chart.js liegt im Ordner vendor.
+Die Lisa-Illustrationen werden über relative Dateipfade aus dem Ordner `images/` geladen. Dieser Ordner muss beim Hochladen ebenfalls mitgenommen werden.
+
+In index.html liegt unter `diagramm-daten-sicherung` zusätzlich eine unveränderte Kopie der JSON-Antwort von unload.php, exportiert am 03.11.2026. Beim direkten Öffnen der HTML-Datei oder bei einem Fehler des Daten-Endpunkts verwenden alle drei Diagramme diese Originaldatenkopie und kennzeichnen sie entsprechend. Auf einem funktionierenden PHP-Server werden weiterhin zuerst die Daten aus unload.php geladen. Die Diagrammdaten werden unabhängig von der Scrollanimation gezeichnet.
 
 Learnings (Backend)
 Wir haben verstanden, dass KI prompten sehr hilft, jedoch wichtig ist, dass wir den Inhalt verstehen und der künstlichen Intelligenz nicht einfach blind vertrauen. 

@@ -1,5 +1,5 @@
 // Diese PHP-Datei liefert uns die Daten für die Diagramme
-const DATEN_URL = '/unload.php';
+const DATEN_URL = 'unload.php';
 
 
 
@@ -8,14 +8,14 @@ const AKTUELLER_ZEITRAUM = '2018-2022';
 const ZIELALTER = '20-29';
 const MAX_NEUERKRANKUNGEN_UNTER_50 = 4000;
 const GESCHLECHTER = { total: 'Beide Geschlechter', female: 'Frauen', male: 'Männer', comparison: 'Frauen & Männer' };
-const ROTBRAUN = '#954139';
-const ROSA = '#e9a59c';
-const BLAU = '#8e9aee';
+const ROSA = '#f3b6a6';
+const BLAU = '#a9b4ff';
 
 
 
 // Hier speichern wir später die Daten, die wir von PHP bekommen
 let daten = [];
+let datenHinweis = '';
 
 // Die ersten zwei Diagramme starten mit beiden Geschlechtern, das dritte mit Frauen
 const auswahl = { altersdiagramm: 'total', zeitdiagramm: 'comparison', krebsartendiagramm: 'female' };
@@ -189,6 +189,26 @@ function diagrammErstellen(kennung, diagrammdaten) {
         konfiguration = {
             type: 'bar',
             data: diagrammdaten,
+            plugins: [{
+                id: 'zielalterHintergrund',
+                beforeDraw(diagramm) {
+                    // Nur bei beiden Geschlechtern die Spalte für 20–29 Jahre heller hinterlegen.
+                    if (auswahl.altersdiagramm !== 'total') {
+                        return;
+                    }
+                    const index = diagramm.data.labels.indexOf(ZIELALTER);
+                    const { ctx, chartArea, scales: { x } } = diagramm;
+                    if (index < 0 || !chartArea) {
+                        return;
+                    }
+                    const links = Math.max(chartArea.left, x.getPixelForValue(index - 0.5));
+                    const rechts = Math.min(chartArea.right, x.getPixelForValue(index + 0.5));
+                    ctx.save();
+                    ctx.fillStyle = 'rgba(255, 244, 241, 0.1)';
+                    ctx.fillRect(links, chartArea.top, rechts - links, chartArea.bottom - chartArea.top);
+                    ctx.restore();
+                }
+            }],
             options: {
                 responsive: true, // Die Breite passt sich dem Bildschirm an
                 maintainAspectRatio: false,
@@ -302,14 +322,24 @@ function diagrammErstellen(kennung, diagrammdaten) {
             }
         };
     }
+    // Canvas-Texte und Hilfslinien übernehmen die hellen Farben der Seite.
+    const canvas = document.getElementById(kennung);
+    const farben = window.getComputedStyle(canvas.closest('.card'));
+    const textfarbe = farben.getPropertyValue('--text').trim();
+    const linienfarbe = farben.getPropertyValue('--border').trim();
+    konfiguration.options.color = textfarbe;
+    konfiguration.options.plugins.legend = {
+        ...konfiguration.options.plugins.legend,
+        labels: { color: textfarbe }
+    };
+    Object.values(konfiguration.options.scales).forEach(achse => {
+        achse.ticks = { ...achse.ticks, color: textfarbe };
+        achse.title = { ...achse.title, color: textfarbe };
+        achse.grid = { ...achse.grid, color: linienfarbe, tickColor: linienfarbe };
+        achse.border = { color: linienfarbe };
+    });
     konfiguration.options.animation = false;
-    konfiguration.plugins = [{
-        id: 'diagrammwerteSichtbarkeit',
-        beforeDatasetsDraw: diagramm => diagramm.$werteSichtbar === true,
-        beforeTooltipDraw: diagramm => diagramm.$werteSichtbar === true
-    }];
-    diagramme[kennung] = new Chart(document.getElementById(kennung), konfiguration);
-    diagramme[kennung].$werteSichtbar = false;
+    diagramme[kennung] = new Chart(canvas, konfiguration);
 }
 
 // Unter jedem Diagramm zeigen wir die gleichen Zahlen nochmals als Tabelle
@@ -392,8 +422,8 @@ function render(kennung, erstellen = false) {
                 gesamt: alterswert.gesamt
             })),
             backgroundColor: geschlecht === 'total'
-                ? (ausgewaehltesGeschlecht === 'female' ? ROTBRAUN : ROSA)
-                : alterswerte.map(alterswert => alterswert.altersklasse === ZIELALTER ? ROTBRAUN : '#595959')
+                ? (ausgewaehltesGeschlecht === 'female' ? ROSA : BLAU)
+                : alterswerte.map(alterswert => alterswert.altersklasse === ZIELALTER ? ROSA : '#d5ccca')
         }));
         spalten = geschlecht === 'total'
             ? ['Altersklasse', 'Frauen', 'Männer', 'Gesamt']
@@ -418,7 +448,7 @@ function render(kennung, erstellen = false) {
             const werte = new Map(zeilen.filter(zeile => zeile.sex === ausgewaehltesGeschlecht)
                 .map(zeile => [zeile.period, zeile]));
             const bezeichnung = GESCHLECHTER[ausgewaehltesGeschlecht] + ' · ';
-            const farbe = ausgewaehltesGeschlecht === 'male' ? BLAU : ROTBRAUN;
+            const farbe = ausgewaehltesGeschlecht === 'male' ? BLAU : ROSA;
             return [
                 {
                     label: bezeichnung + 'Inzidenz',
@@ -468,7 +498,7 @@ function render(kennung, erstellen = false) {
             {
                 label: 'Neuerkrankungen',
                 data: zeilen.map(zeile => zeile.cases),
-                backgroundColor: ROTBRAUN
+                backgroundColor: ROSA
             },
             {
                 label: 'Todesfälle (Mortalität)',
@@ -488,7 +518,7 @@ function render(kennung, erstellen = false) {
     canvas.setAttribute('aria-label', titel[kennung] + ' · ' + GESCHLECHTER[geschlecht]);
     // Wenn Daten fehlen, erscheint unter dem Diagramm ein Hinweis
     const status = document.getElementById(kennung + '-status');
-    status.textContent = zeilen.length === 0 ? 'Für diese Auswahl fehlen passende Daten. Zeitraum, Altersgruppe und Bezeichnungen in der Datenbank prüfen.' : '';
+    status.textContent = zeilen.length === 0 ? 'Für diese Auswahl fehlen passende Daten. Zeitraum, Altersgruppe und Bezeichnungen in der Datenbank prüfen.' : datenHinweis;
     if (kennung === 'krebsartendiagramm' && zeilen.length === 0 && DATEN_URL === 'data.json') {
         status.textContent += ' Die Musterdatei enthält nur eine Beispielreihe für Frauen.';
     }
@@ -506,64 +536,38 @@ function render(kennung, erstellen = false) {
 }
 
 function diagrammAnimationEinrichten() {
-    const startverzoegerungen = new Map();
+    // Die Daten sind von Anfang an sichtbar. Die Animation ergänzt nur den ersten Bildaufbau.
+    if (!('IntersectionObserver' in window)) {
+        return;
+    }
 
-    const beobachter = new IntersectionObserver((eintraege) => {
+    const beobachter = new IntersectionObserver(eintraege => {
         eintraege.forEach(eintrag => {
-            const canvas = eintrag.target.querySelector('canvas');
-            if (!canvas) {
+            if (!eintrag.isIntersecting) {
                 return;
             }
-            const kennung = canvas.id;
-            const diagramm = diagramme[kennung];
-            window.clearTimeout(startverzoegerungen.get(kennung));
-            startverzoegerungen.delete(kennung);
-
+            const canvas = eintrag.target.querySelector('canvas');
+            const diagramm = canvas && diagramme[canvas.id];
             if (!diagramm) {
                 return;
             }
-
-            if (!eintrag.isIntersecting) {
-                diagramm.stop();
-                diagramm.$werteSichtbar = false;
-                diagramm.options.animation = false;
-                diagramm.update('none');
+            beobachter.unobserve(eintrag.target);
+            if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
                 return;
             }
 
-            if (eintrag.intersectionRatio < 1 || diagramm.$werteSichtbar) {
-                return;
-            }
-
-            const zeitgeber = window.setTimeout(() => {
-                startverzoegerungen.delete(kennung);
-                const position = eintrag.target.getBoundingClientRect();
-                if (position.top < 0 || position.bottom > window.innerHeight) {
-                    return;
-                }
-
-                diagramm.stop();
-                diagramm.options.animation = window.matchMedia('(prefers-reduced-motion: reduce)').matches
-                    ? false
-                    : { duration: 2400, easing: 'easeOutQuart' };
-                diagramm.$werteSichtbar = true;
-                diagramm.reset();
-                diagramm.update();
-            }, 300);
-            startverzoegerungen.set(kennung, zeitgeber);
+            diagramm.options.animation = { duration: 2400, easing: 'easeOutQuart' };
+            diagramm.reset();
+            diagramm.update();
         });
-    }, {
-        rootMargin: '0px',
-        threshold: [0, 1]
+    }, { threshold: 0.1 });
+
+    ['altersdiagramm', 'zeitdiagramm', 'krebsartendiagramm'].forEach(kennung => {
+        const canvas = document.getElementById(kennung);
+        if (canvas) {
+            beobachter.observe(canvas.parentElement);
+        }
     });
-
-    ['altersdiagramm', 'zeitdiagramm', 'krebsartendiagramm']
-        .forEach(kennung => {
-            const canvas = document.getElementById(kennung);
-            if (canvas) {
-                beobachter.observe(canvas.parentElement);
-            }
-        });
 }
 
 // Hier legen wir fest, was beim Klick auf einen Geschlechter-Knopf passiert
@@ -598,25 +602,42 @@ function filterEinrichten(kennung) {
     });
 }
 
+function datenKopieLaden(ladefehler) {
+    const sicherung = document.getElementById('diagramm-daten-sicherung');
+    if (!sicherung) {
+        throw ladefehler ?? new Error('Die gespeicherte Datenkopie fehlt.');
+    }
+    const kopie = JSON.parse(sicherung.textContent);
+    if (!Array.isArray(kopie.zeilen) || kopie.zeilen.length === 0) {
+        throw ladefehler ?? new Error('Die gespeicherte Datenkopie ist leer.');
+    }
+    datenHinweis = 'Gespeicherte Originaldatenkopie.';
+    return datenAnpassen(kopie.zeilen);
+}
+
 async function datenLaden() {
-    // fetch fragt die PHP-Datei an. Mit await warten wir auf die Antwort
-    const antwort = await fetch(DATEN_URL);
-    // Wenn der Server einen Fehler meldet, machen wir hier nicht weiter
-    if (!antwort.ok) {
-        throw new Error('HTTP-Status ' + antwort.status);
+    datenHinweis = '';
+    // Beim direkten Öffnen der HTML-Datei kann der Browser kein PHP ausführen.
+    if (window.location.protocol === 'file:') {
+        return datenKopieLaden();
     }
-    // Wir prüfen, ob die PHP-Datei wirklich Daten im JSON-Format liefert
-    const contentType = antwort.headers.get('content-type') ?? '';
-    if (!contentType.includes('application/json')) {
-        throw new Error('Die Antwort ist kein JSON.');
+    try {
+        const antwort = await fetch(DATEN_URL);
+        if (!antwort.ok) {
+            throw new Error('HTTP-Status ' + antwort.status);
+        }
+        const contentType = antwort.headers.get('content-type') ?? '';
+        if (!contentType.includes('application/json')) {
+            throw new Error('Die Antwort ist kein JSON.');
+        }
+        const zeilen = await antwort.json();
+        if (!Array.isArray(zeilen) || zeilen.length === 0) {
+            throw new Error('Der Datenvertrag verlangt eine nicht leere Liste von Datensätzen.');
+        }
+        return datenAnpassen(zeilen);
+    } catch (fehler) {
+        return datenKopieLaden(fehler);
     }
-    // Hier lesen wir die Daten aus der Antwort
-    const zeilen = await antwort.json();
-    // Wir erwarten eine Liste von Datenzeilen
-    if (!Array.isArray(zeilen)) {
-        throw new Error('Der Datenvertrag verlangt eine Liste von Datensätzen.');
-    }
-    return datenAnpassen(zeilen);
 }
 
 // Beim Öffnen der Seite laden wir die Daten und bereiten die Diagramme und Knöpfe vor
@@ -679,6 +700,56 @@ function grafikNavigationEinrichten() {
 
 function introBereich(fortschritt, start, ende) {
     return Math.max(0, Math.min(1, (fortschritt - start) / (ende - start)));
+}
+
+// Die Illustrationen erscheinen beim Scrollen; Lisa trinkt Kaffee oder schließt im Krankenhaus müde die Augen.
+function lisaIllustrationEinrichten() {
+    document.querySelectorAll('.lisa-illustration, .lisa-krankenhaus-illustration, .lisa-abschluss-illustration').forEach(illustration => {
+        const bewegung = window.matchMedia('(prefers-reduced-motion: reduce)');
+        const ablaeufe = [
+            { animationen: illustration.querySelectorAll('.lisa-auge > animateTransform'), pause: 3000, variation: 2000, dauer: 220 },
+            { animationen: illustration.querySelectorAll('[data-lisa-animation="schluerfen"]'), erstePause: 2100, pause: 3000, variation: 0, dauer: 3200 },
+            { animationen: illustration.querySelectorAll('[data-lisa-animation="krankenhaus-ruhen"]'), erstePause: 2600, pause: 4500, variation: 2000, dauer: 1150 },
+            { animationen: illustration.querySelectorAll('[data-lisa-animation="abschluss-blinzeln"]'), erstePause: 2300, pause: 3000, variation: 1800, dauer: 380 }
+        ];
+        let sichtbar = false;
+
+        function animationPlanen(ablauf, ersteRunde = false) {
+            window.clearTimeout(ablauf.zeitgeber);
+            ablauf.animationen.forEach(animation => animation.endElement());
+            if (ablauf.animationen.length === 0 || !sichtbar || document.hidden || bewegung.matches) {
+                return;
+            }
+
+            // Der erste Schluck folgt dem Einblenden; danach wiederholt er sich regelmäßig.
+            const pause = ersteRunde ? (ablauf.erstePause ?? ablauf.pause) : ablauf.pause;
+            ablauf.zeitgeber = window.setTimeout(() => {
+                ablauf.animationen.forEach(animation => animation.beginElement());
+                ablauf.zeitgeber = window.setTimeout(() => animationPlanen(ablauf), ablauf.dauer);
+            }, pause + Math.random() * ablauf.variation);
+        }
+
+        function animationenPlanen() {
+            ablaeufe.forEach(ablauf => animationPlanen(ablauf, true));
+        }
+
+        illustration.classList.add('lisa-animiert');
+        const beobachter = new IntersectionObserver(eintraege => {
+            const nunSichtbar = eintraege[0].isIntersecting;
+            if (nunSichtbar === sichtbar) {
+                return;
+            }
+            sichtbar = nunSichtbar;
+            if (sichtbar) {
+                illustration.classList.add('lisa-sichtbar');
+            }
+            animationenPlanen();
+        }, { threshold: 0, rootMargin: '0px' });
+
+        beobachter.observe(illustration);
+        bewegung.addEventListener('change', animationenPlanen);
+        document.addEventListener('visibilitychange', animationenPlanen);
+    });
 }
 
 function introEinrichten() {
@@ -757,7 +828,8 @@ function introEinrichten() {
     introAktualisieren();
 }
 
-// Sobald diese Datei geladen ist, starten wir alles
-introEinrichten();
-grafikNavigationEinrichten();
+// Die Diagramme starten unabhängig von den dekorativen Animationen.
 void starten();
+introEinrichten();
+lisaIllustrationEinrichten();
+grafikNavigationEinrichten();
