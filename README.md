@@ -6,13 +6,6 @@
 ## Datengrundlage
 Unsere Datensätze sind Krebsdaten des Bundesamts für Statistik: https://stats.swiss/vis?lc=de&df%5Bds%5D=disseminate&df%5Bid%5D=DF_STATKREBS_NUM_RATES&df%5Bag%5D=CH1.STATKREBS&df%5Bvs%5D=1.0.0&dq=1.28%252B0.1%252B2%252B_T.2018.Y20T24%252BY25T29.1%252B2.200%252B1000&to%5BTIME%5D=false&vw=tb
 
-Frontend-Aufbau
-Vor Lisas Geschichte steht ein DNA-Video mit einer scrollgesteuerten Altersanzeige von 100 bis 20 Jahren. Der Einstieg verwendet HTML, CSS und JavaScript ohne zusätzliches Animations-Framework. Über «Zur Geschichte» lässt er sich überspringen; bei reduzierter Bewegung bleibt er statisch.
-Die Datei dna.mp4 liegt neben index.html, style.css und script.js und muss beim Hochladen mitgenommen werden. Die drei Diagramme laden weiterhin die Daten aus unload.php; Chart.js liegt im Ordner vendor.
-Die Lisa-Illustrationen werden über relative Dateipfade aus dem Ordner `images/` geladen. Dieser Ordner muss beim Hochladen ebenfalls mitgenommen werden.
-
-In index.html liegt unter `diagramm-daten-sicherung` zusätzlich eine unveränderte Kopie der JSON-Antwort von unload.php, exportiert am 03.11.2026. Beim direkten Öffnen der HTML-Datei oder bei einem Fehler des Daten-Endpunkts verwenden alle drei Diagramme diese Originaldatenkopie und kennzeichnen sie entsprechend. Auf einem funktionierenden PHP-Server werden weiterhin zuerst die Daten aus unload.php geladen. Die Diagrammdaten werden unabhängig von der Scrollanimation gezeichnet.
-
 ## Learnings (Backend)
 Wir haben verstanden, dass KI prompten sehr hilft, jedoch wichtig ist, dass wir den Inhalt verstehen und der künstlichen Intelligenz nicht einfach blind vertrauen. 
 Ein weiteres Learning war, dass wir im Vorhinein wissen mussten, was für Daten man für eine Datengeschichte braucht und wieso. Visualisierungen auf Papier vor der Datentransformation haben uns daher sehr weitergeholfen.
